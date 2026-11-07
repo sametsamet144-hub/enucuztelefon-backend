@@ -4,6 +4,7 @@ using EnUcuzTelefon.Api.Services;
 using EnUcuzTelefon.Infrastructure;
 using EnUcuzTelefon.Infrastructure.Identity;
 using EnUcuzTelefon.Infrastructure.Persistence;
+using EnUcuzTelefon.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
@@ -41,6 +42,9 @@ builder.Services.AddDataProtection()
 // 2. Add Infrastructure Services (EF Core, Redis, RabbitMQ, Store Adapters, Quartz)
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddScoped<IAuthService, AuthService>();
+
+// 2.1 Register Scraping Background Worker directly inside the API
+builder.Services.AddHostedService<ScrapingBackgroundWorker>();
 
 // 3. Controllers
 builder.Services.AddControllers();

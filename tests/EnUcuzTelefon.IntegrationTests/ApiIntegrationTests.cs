@@ -1,19 +1,25 @@
 using System.Net;
 using System.Net.Http.Json;
 using EnUcuzTelefon.Application.DTOs;
+using EnUcuzTelefon.Infrastructure.Identity;
 using EnUcuzTelefon.Infrastructure.Persistence;
 using EnUcuzTelefon.Shared.Results;
 using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 namespace EnUcuzTelefon.IntegrationTests;
 
 public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 {
+    private static readonly object _lock = new();
+    private static bool _seeded = false;
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseContentRoot(AppContext.BaseDirectory);
@@ -34,6 +40,24 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
             });
         });
     }
+
+    public void EnsureSeeded()
+    {
+        lock (_lock)
+        {
+            if (_seeded) return;
+            _ = CreateClient(); // Ensures web host is started and Program.cs runs
+            using var scope = Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            if (!db.Products.Any())
+            {
+                var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+                var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+                DatabaseSeeder.SeedAsync(db, userManager, roleManager, NullLogger.Instance).GetAwaiter().GetResult();
+            }
+            _seeded = true;
+        }
+    }
 }
 
 public class ApiIntegrationTests : IClassFixture<CustomWebApplicationFactory>
@@ -42,6 +66,7 @@ public class ApiIntegrationTests : IClassFixture<CustomWebApplicationFactory>
 
     public ApiIntegrationTests(CustomWebApplicationFactory factory)
     {
+        factory.EnsureSeeded();
         _client = factory.CreateClient();
     }
 

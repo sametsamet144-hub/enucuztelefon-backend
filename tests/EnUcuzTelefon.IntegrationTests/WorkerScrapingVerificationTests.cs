@@ -17,6 +17,7 @@ public class WorkerScrapingVerificationTests : IClassFixture<CustomWebApplicatio
 
     public WorkerScrapingVerificationTests(CustomWebApplicationFactory factory)
     {
+        factory.EnsureSeeded();
         _factory = factory;
     }
 

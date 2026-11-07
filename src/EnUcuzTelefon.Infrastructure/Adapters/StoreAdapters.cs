@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using EnUcuzTelefon.Application.Interfaces;
 using EnUcuzTelefon.Shared.Results;
@@ -15,7 +17,7 @@ public class TrendyolAdapter : BaseStoreAdapter
     public override Task<Result<IReadOnlyList<StoreRawProduct>>> FetchProductsAsync(string? category = null, CancellationToken cancellationToken = default)
         => SearchProductsAsync("cep telefonu", cancellationToken);
 
-    public override async Task<Result<IReadOnlyList<StoreRawProduct>>> SearchProductsAsync(string query, CancellationToken cancellationToken = default)
+    protected override async Task<Result<IReadOnlyList<StoreRawProduct>>> SearchDirectAsync(string query, CancellationToken cancellationToken = default)
     {
         var results = new List<StoreRawProduct>();
         try
@@ -36,8 +38,8 @@ public class TrendyolAdapter : BaseStoreAdapter
                 var matchState = Regex.Match(html, @"window\.__SEARCH_APP_INITIAL_STATE__\s*=\s*(\{.*?\});\s*window\.__PRELOADED_STATE__", RegexOptions.Singleline);
                 if (matchState.Success)
                 {
-                    using var doc = System.Text.Json.JsonDocument.Parse(matchState.Groups[1].Value);
-                    if (doc.RootElement.TryGetProperty("products", out var prdArray) && prdArray.ValueKind == System.Text.Json.JsonValueKind.Array)
+                    using var doc = JsonDocument.Parse(matchState.Groups[1].Value);
+                    if (doc.RootElement.TryGetProperty("products", out var prdArray) && prdArray.ValueKind == JsonValueKind.Array)
                     {
                         foreach (var p in prdArray.EnumerateArray())
                         {
@@ -46,18 +48,18 @@ public class TrendyolAdapter : BaseStoreAdapter
                             decimal price = 0;
                             if (p.TryGetProperty("price", out var pObj))
                             {
-                                if (pObj.TryGetProperty("discountedPrice", out var dp) && dp.ValueKind == System.Text.Json.JsonValueKind.Number)
+                                if (pObj.TryGetProperty("discountedPrice", out var dp) && dp.ValueKind == JsonValueKind.Number)
                                     price = dp.GetDecimal();
-                                else if (pObj.TryGetProperty("sellingPrice", out var sp) && sp.ValueKind == System.Text.Json.JsonValueKind.Number)
+                                else if (pObj.TryGetProperty("sellingPrice", out var sp) && sp.ValueKind == JsonValueKind.Number)
                                     price = sp.GetDecimal();
                             }
                             var fullUrl = urlPath != null ? (urlPath.StartsWith("http") ? urlPath : $"https://www.trendyol.com{urlPath}") : searchUrl;
 
-                            if (!string.IsNullOrWhiteSpace(name) && price > 0)
+                            if (!string.IsNullOrWhiteSpace(name) && price >= 1500 && !IsAccessory(name))
                             {
                                 var (brand, model, ram, storage, color) = ParseTitle(name);
                                 results.Add(new StoreRawProduct(
-                                    ExternalId: $"TY-{Math.Abs(name.GetHashCode()):X8}",
+                                    ExternalId: $"TY-{Math.Abs((fullUrl + price).GetHashCode()):X8}",
                                     Title: name,
                                     Url: fullUrl,
                                     Price: price,
@@ -96,7 +98,7 @@ public class HepsiburadaAdapter : BaseStoreAdapter
     public override Task<Result<IReadOnlyList<StoreRawProduct>>> FetchProductsAsync(string? category = null, CancellationToken cancellationToken = default)
         => SearchProductsAsync("cep telefonu", cancellationToken);
 
-    public override async Task<Result<IReadOnlyList<StoreRawProduct>>> SearchProductsAsync(string query, CancellationToken cancellationToken = default)
+    protected override async Task<Result<IReadOnlyList<StoreRawProduct>>> SearchDirectAsync(string query, CancellationToken cancellationToken = default)
     {
         var results = new List<StoreRawProduct>();
         try
@@ -120,8 +122,8 @@ public class HepsiburadaAdapter : BaseStoreAdapter
                         var json = m.Groups[1].Value;
                         if (json.Contains("\"itemListElement\""))
                         {
-                            using var doc = System.Text.Json.JsonDocument.Parse(json);
-                            if (doc.RootElement.TryGetProperty("itemListElement", out var listElem) && listElem.ValueKind == System.Text.Json.JsonValueKind.Array)
+                            using var doc = JsonDocument.Parse(json);
+                            if (doc.RootElement.TryGetProperty("itemListElement", out var listElem) && listElem.ValueKind == JsonValueKind.Array)
                             {
                                 foreach (var itemElem in listElem.EnumerateArray())
                                 {
@@ -132,17 +134,17 @@ public class HepsiburadaAdapter : BaseStoreAdapter
                                         decimal price = 0;
                                         if (item.TryGetProperty("offers", out var off) && off.TryGetProperty("price", out var pProp))
                                         {
-                                            if (pProp.ValueKind == System.Text.Json.JsonValueKind.Number)
+                                            if (pProp.ValueKind == JsonValueKind.Number)
                                                 price = pProp.GetDecimal();
-                                            else if (decimal.TryParse(pProp.GetString(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var p))
+                                            else if (decimal.TryParse(pProp.GetString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var p))
                                                 price = p;
                                         }
 
-                                        if (!string.IsNullOrWhiteSpace(title) && price > 0)
+                                        if (!string.IsNullOrWhiteSpace(title) && price >= 1500 && !IsAccessory(title))
                                         {
                                             var (brand, model, ram, storage, color) = ParseTitle(title);
                                             results.Add(new StoreRawProduct(
-                                                ExternalId: $"HB-{Math.Abs(title.GetHashCode()):X8}",
+                                                ExternalId: $"HB-{Math.Abs((url ?? title).GetHashCode()):X8}",
                                                 Title: title.Trim(),
                                                 Url: url ?? searchUrl,
                                                 Price: price,
@@ -211,6 +213,61 @@ public class VatanAdapter : BaseStoreAdapter
     public VatanAdapter(ILogger<VatanAdapter> logger, HttpClient httpClient) : base(logger, httpClient) { }
     public override Task<Result<IReadOnlyList<StoreRawProduct>>> FetchProductsAsync(string? category = null, CancellationToken cancellationToken = default)
         => SearchProductsAsync("cep telefonu", cancellationToken);
+
+    protected override async Task<Result<IReadOnlyList<StoreRawProduct>>> SearchDirectAsync(string query, CancellationToken cancellationToken = default)
+    {
+        var results = new List<StoreRawProduct>();
+        try
+        {
+            var searchUrl = $"https://www.vatanbilgisayar.com/arama/{Uri.EscapeDataString(query)}/";
+            using var req = new HttpRequestMessage(HttpMethod.Get, searchUrl);
+            req.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36");
+            req.Headers.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+            req.Headers.Add("Accept-Language", "tr-TR,tr;q=0.9,en-US;q=0.8");
+
+            using var response = await HttpClient.SendAsync(req, cancellationToken);
+            if (response.IsSuccessStatusCode)
+            {
+                var html = await response.Content.ReadAsStringAsync(cancellationToken);
+                var cardMatches = Regex.Matches(html, @"<div[^>]*class=""product-list__content""[^>]*>.*?<div class=""product-list__product-name""[^>]*>\s*<a[^>]*href=""(?<url>[^""]+)""[^>]*>\s*<h3>(?<name>[^<]+)</h3>.*?<span class=""product-list__price"">\s*(?<price>[\d.,]+)\s*</span>", RegexOptions.Singleline | RegexOptions.IgnoreCase);
+
+                foreach (Match m in cardMatches)
+                {
+                    var title = m.Groups["name"].Value.Trim();
+                    var urlPath = m.Groups["url"].Value.Trim();
+                    var rawPrice = m.Groups["price"].Value.Replace(".", "").Replace(",", ".");
+
+                    if (decimal.TryParse(rawPrice, NumberStyles.Any, CultureInfo.InvariantCulture, out var price) &&
+                        price >= 1500 && !IsAccessory(title))
+                    {
+                        var fullUrl = urlPath.StartsWith("http") ? urlPath : $"https://www.vatanbilgisayar.com{urlPath}";
+                        var (brand, model, ram, storage, color) = ParseTitle(title);
+                        results.Add(new StoreRawProduct(
+                            ExternalId: $"VATAN-{Math.Abs(fullUrl.GetHashCode()):X8}",
+                            Title: title,
+                            Url: fullUrl,
+                            Price: price,
+                            SellerName: "Vatan Bilgisayar Yetkili Satıcı",
+                            InStock: true,
+                            ImageUrl: null,
+                            Brand: brand,
+                            Model: model,
+                            RamGb: ram,
+                            StorageGb: storage,
+                            Color: color,
+                            RawJson: null
+                        ));
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Failed to scrape Vatan live query '{Query}'", query);
+        }
+
+        return Result.Success<IReadOnlyList<StoreRawProduct>>(results);
+    }
 }
 
 public class N11Adapter : BaseStoreAdapter
@@ -223,7 +280,7 @@ public class N11Adapter : BaseStoreAdapter
     public override Task<Result<IReadOnlyList<StoreRawProduct>>> FetchProductsAsync(string? category = null, CancellationToken cancellationToken = default)
         => SearchProductsAsync("cep telefonu", cancellationToken);
 
-    public override async Task<Result<IReadOnlyList<StoreRawProduct>>> SearchProductsAsync(string query, CancellationToken cancellationToken = default)
+    protected override async Task<Result<IReadOnlyList<StoreRawProduct>>> SearchDirectAsync(string query, CancellationToken cancellationToken = default)
     {
         var results = new List<StoreRawProduct>();
         try
@@ -232,50 +289,49 @@ public class N11Adapter : BaseStoreAdapter
             using var req = new HttpRequestMessage(HttpMethod.Get, searchUrl);
             req.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36");
             req.Headers.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
-            req.Headers.Add("Accept-Language", "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7");
+            req.Headers.Add("Accept-Language", "tr-TR,tr;q=0.9,en-US;q=0.8");
 
             using var response = await HttpClient.SendAsync(req, cancellationToken);
             if (response.IsSuccessStatusCode)
             {
                 var html = await response.Content.ReadAsStringAsync(cancellationToken);
 
-                // 1. Check for schema.org ItemList JSON-LD
-                var jsonLdMatches = Regex.Matches(html, @"<script\s+type=[""']application/ld\+json[""'][^>]*>(.*?)</script>", RegexOptions.Singleline | RegexOptions.IgnoreCase);
-                foreach (Match m in jsonLdMatches)
+                // 1. Check window.model in script
+                var modelPos = html.IndexOf("window.model =");
+                if (modelPos >= 0)
                 {
-                    try
+                    var start = modelPos + 14;
+                    var end = html.IndexOf("</script>", modelPos);
+                    if (end > start)
                     {
-                        var json = m.Groups[1].Value;
-                        if (json.Contains("\"@type\":\"ItemList\"") || json.Contains("\"itemListElement\""))
+                        var json = html.Substring(start, end - start).Trim();
+                        if (json.EndsWith(";")) json = json.Substring(0, json.Length - 1);
+                        try
                         {
-                            using var doc = System.Text.Json.JsonDocument.Parse(json);
-                            if (doc.RootElement.TryGetProperty("itemListElement", out var listElem) && listElem.ValueKind == System.Text.Json.JsonValueKind.Array)
+                            using var doc = JsonDocument.Parse(json);
+                            if (doc.RootElement.TryGetProperty("jsonLDListItem", out var ldItem) &&
+                                ldItem.TryGetProperty("itemListElement", out var ldElemArr) &&
+                                ldElemArr.ValueKind == JsonValueKind.Array)
                             {
-                                foreach (var itemElem in listElem.EnumerateArray())
+                                foreach (var elem in ldElemArr.EnumerateArray())
                                 {
-                                    if (itemElem.TryGetProperty("item", out var item))
+                                    if (elem.TryGetProperty("item", out var it))
                                     {
-                                        var title = item.TryGetProperty("name", out var tProp) ? tProp.GetString() : null;
-                                        var url = item.TryGetProperty("url", out var uProp) ? uProp.GetString() : null;
-                                        var img = item.TryGetProperty("image", out var imgProp) ? imgProp.GetString() : null;
+                                        var title = it.TryGetProperty("name", out var tProp) ? tProp.GetString() : null;
+                                        var url = it.TryGetProperty("url", out var uProp) ? uProp.GetString() : null;
+                                        var img = it.TryGetProperty("image", out var imgProp) ? imgProp.GetString() : null;
                                         decimal price = 0;
-                                        if (item.TryGetProperty("offers", out var off))
+                                        if (it.TryGetProperty("offers", out var off) && off.TryGetProperty("price", out var pProp))
                                         {
-                                            if (off.TryGetProperty("price", out var pProp))
-                                            {
-                                                if (pProp.ValueKind == System.Text.Json.JsonValueKind.Number)
-                                                    price = pProp.GetDecimal();
-                                                else if (decimal.TryParse(pProp.GetString(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var p))
-                                                    price = p;
-                                            }
+                                            if (pProp.ValueKind == JsonValueKind.Number) price = pProp.GetDecimal();
+                                            else if (decimal.TryParse(pProp.GetString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var p)) price = p;
                                         }
 
-                                        if (!string.IsNullOrWhiteSpace(title) && price > 0)
+                                        if (!string.IsNullOrWhiteSpace(title) && price >= 1500 && !IsAccessory(title))
                                         {
                                             var (brand, model, ram, storage, color) = ParseTitle(title);
-                                            var extId = $"N11-{Math.Abs(title.GetHashCode()):X8}";
                                             results.Add(new StoreRawProduct(
-                                                ExternalId: extId,
+                                                ExternalId: $"N11-{Math.Abs((url ?? title).GetHashCode()):X8}",
                                                 Title: title.Trim(),
                                                 Url: url ?? searchUrl,
                                                 Price: price,
@@ -294,40 +350,63 @@ public class N11Adapter : BaseStoreAdapter
                                 }
                             }
                         }
+                        catch { /* continue */ }
                     }
-                    catch { /* continue */ }
                 }
 
-                // 2. Check HTML search items if JSON-LD didn't yield items
+                // 2. Check schema.org ItemList JSON-LD
                 if (!results.Any())
                 {
-                    var productCardPattern = new Regex(@"<li[^>]*class=[""'][^""']*column[^""']*[""'][^>]*>.*?<h3[^>]*class=[""']productName[""'][^>]*>(?<title>[^<]+)</h3>.*?<a[^>]*class=[""']plink[""'][^>]*href=[""'](?<url>[^""']+)[""'].*?<ins>(?<price>[\d.,]+)\s*TL", RegexOptions.Singleline | RegexOptions.IgnoreCase);
-                    var matches = productCardPattern.Matches(html);
-                    foreach (Match pm in matches)
+                    var jsonLdMatches = Regex.Matches(html, @"<script\s+type=[""']application/ld\+json[""'][^>]*>(.*?)</script>", RegexOptions.Singleline | RegexOptions.IgnoreCase);
+                    foreach (Match m in jsonLdMatches)
                     {
-                        var title = pm.Groups["title"].Value.Trim();
-                        var url = pm.Groups["url"].Value.Trim();
-                        var rawPrice = pm.Groups["price"].Value.Replace(".", "").Replace(",", ".");
-                        if (decimal.TryParse(rawPrice, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var prc) && prc > 0)
+                        try
                         {
-                            var (brand, model, ram, storage, color) = ParseTitle(title);
-                            var extId = $"N11-{Math.Abs(title.GetHashCode()):X8}";
-                            results.Add(new StoreRawProduct(
-                                ExternalId: extId,
-                                Title: title,
-                                Url: url,
-                                Price: prc,
-                                SellerName: "n11 Yetkili Satıcı",
-                                InStock: true,
-                                ImageUrl: null,
-                                Brand: brand,
-                                Model: model,
-                                RamGb: ram,
-                                StorageGb: storage,
-                                Color: color,
-                                RawJson: null
-                            ));
+                            var json = m.Groups[1].Value;
+                            if (json.Contains("\"itemListElement\""))
+                            {
+                                using var doc = JsonDocument.Parse(json);
+                                if (doc.RootElement.TryGetProperty("itemListElement", out var listElem) && listElem.ValueKind == JsonValueKind.Array)
+                                {
+                                    foreach (var itemElem in listElem.EnumerateArray())
+                                    {
+                                        if (itemElem.TryGetProperty("item", out var item))
+                                        {
+                                            var title = item.TryGetProperty("name", out var tProp) ? tProp.GetString() : null;
+                                            var url = item.TryGetProperty("url", out var uProp) ? uProp.GetString() : null;
+                                            var img = item.TryGetProperty("image", out var imgProp) ? imgProp.GetString() : null;
+                                            decimal price = 0;
+                                            if (item.TryGetProperty("offers", out var off) && off.TryGetProperty("price", out var pProp))
+                                            {
+                                                if (pProp.ValueKind == JsonValueKind.Number) price = pProp.GetDecimal();
+                                                else if (decimal.TryParse(pProp.GetString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var p)) price = p;
+                                            }
+
+                                            if (!string.IsNullOrWhiteSpace(title) && price >= 1500 && !IsAccessory(title))
+                                            {
+                                                var (brand, model, ram, storage, color) = ParseTitle(title);
+                                                results.Add(new StoreRawProduct(
+                                                    ExternalId: $"N11-{Math.Abs((url ?? title).GetHashCode()):X8}",
+                                                    Title: title.Trim(),
+                                                    Url: url ?? searchUrl,
+                                                    Price: price,
+                                                    SellerName: "n11 Doğrulanmış Mağaza",
+                                                    InStock: true,
+                                                    ImageUrl: img,
+                                                    Brand: brand,
+                                                    Model: model,
+                                                    RamGb: ram,
+                                                    StorageGb: storage,
+                                                    Color: color,
+                                                    RawJson: null
+                                                ));
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
+                        catch { /* continue */ }
                     }
                 }
             }

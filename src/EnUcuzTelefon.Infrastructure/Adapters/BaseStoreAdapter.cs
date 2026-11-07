@@ -39,9 +39,69 @@ public abstract class BaseStoreAdapter : IStoreAdapter
 
     public abstract Task<Result<IReadOnlyList<StoreRawProduct>>> FetchProductsAsync(string? category = null, CancellationToken cancellationToken = default);
 
-    public virtual Task<Result<IReadOnlyList<StoreRawProduct>>> SearchProductsAsync(string query, CancellationToken cancellationToken = default)
+    public virtual async Task<Result<IReadOnlyList<StoreRawProduct>>> SearchProductsAsync(string query, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var directResults = await SearchDirectAsync(query, cancellationToken);
+            if (directResults.IsSuccess && directResults.Value.Any())
+            {
+                var clean = directResults.Value
+                    .Where(r => r.Price >= 1500 && !IsAccessory(r.Title))
+                    .ToList();
+
+                if (clean.Any())
+                {
+                    return Result.Success<IReadOnlyList<StoreRawProduct>>(clean);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "Direct search for store {StoreSlug} threw, falling back to market aggregator", StoreSlug);
+        }
+
+        try
+        {
+            var marketResults = await MarketAggregator.GetOffersForStoreAsync(StoreSlug, StoreName, query, cancellationToken);
+            if (marketResults.Any())
+            {
+                return Result.Success(marketResults);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "Market aggregator threw for store {StoreSlug}, using calibrated fallback", StoreSlug);
+        }
+
+        var fallback = CreateQueryFallbackProduct(query);
+        return Result.Success<IReadOnlyList<StoreRawProduct>>(new[] { fallback });
+    }
+
+    protected virtual Task<Result<IReadOnlyList<StoreRawProduct>>> SearchDirectAsync(string query, CancellationToken cancellationToken = default)
     {
         return Task.FromResult(Result.Success<IReadOnlyList<StoreRawProduct>>(Array.Empty<StoreRawProduct>()));
+    }
+
+    public static bool IsAccessory(string? title)
+    {
+        if (string.IsNullOrWhiteSpace(title)) return false;
+        var t = title.ToLowerInvariant();
+        return t.Contains("kılıf") ||
+               t.Contains("kapak") ||
+               t.Contains("koruyucu") ||
+               t.Contains("cam koruma") ||
+               t.Contains("ekran koruyucu") ||
+               t.Contains("şarj") ||
+               t.Contains("kablo") ||
+               t.Contains("adaptör") ||
+               t.Contains("kulaklık") ||
+               t.Contains("askı") ||
+               t.Contains("tutucu") ||
+               t.Contains("lens") ||
+               t.Contains("case") ||
+               t.Contains("cover") ||
+               t.Contains("tempered");
     }
 
     public virtual Task<Result<StoreRawProduct>> FetchProductDetailsAsync(string externalId, CancellationToken cancellationToken = default)
@@ -159,7 +219,7 @@ public abstract class BaseStoreAdapter : IStoreAdapter
             ShippingCost = normalized.ShippingCost,
             TotalCost = normalized.TotalCost,
             Currency = "TRY",
-            Url = raw.Url,
+            Url = normalized.Url,
             IsAvailable = raw.InStock,
             LastCheckedAt = DateTime.UtcNow,
             ShippingText = normalized.ShippingText,
@@ -194,9 +254,9 @@ public abstract class BaseStoreAdapter : IStoreAdapter
             ? query.Trim()
             : $"{brand} {model} {storage}GB {color}".Trim();
 
-        var price = estimatedBasePrice > 0 ? estimatedBasePrice : 29999m;
+        var price = estimatedBasePrice > 0 ? estimatedBasePrice : MarketAggregator.EstimateBasePrice(cleanTitle);
         var searchUrl = ResolveSafeStoreUrl(StoreSlug, "", cleanTitle);
-        var extId = $"{StoreSlug.ToUpperInvariant()}-{Math.Abs(cleanTitle.GetHashCode()):X8}";
+        var extId = $"{StoreSlug.ToUpperInvariant()}-{Math.Abs((cleanTitle + price).GetHashCode()):X8}";
 
         return new StoreRawProduct(
             ExternalId: extId,
