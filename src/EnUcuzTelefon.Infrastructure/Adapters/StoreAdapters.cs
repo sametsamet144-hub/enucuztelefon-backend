@@ -224,6 +224,31 @@ public class MediaMarktAdapter : BaseStoreAdapter
     public MediaMarktAdapter(ILogger<MediaMarktAdapter> logger, HttpClient httpClient) : base(logger, httpClient) { }
     public override Task<Result<IReadOnlyList<StoreRawProduct>>> FetchProductsAsync(string? category = null, CancellationToken cancellationToken = default)
         => SearchProductsAsync("cep telefonu", cancellationToken);
+
+    protected override async Task<Result<IReadOnlyList<StoreRawProduct>>> SearchDirectAsync(string query, CancellationToken cancellationToken = default)
+    {
+        var offers = await MarketAggregator.ScrapeMediaMarktLiveAsync(query, cancellationToken);
+        var results = offers.Select(o =>
+        {
+            var (brand, model, ram, storage, color) = ParseTitle(query);
+            return new StoreRawProduct(
+                ExternalId: $"MM-{Math.Abs(o.Url.GetHashCode()):X8}",
+                Title: query,
+                Url: o.Url,
+                Price: o.Price,
+                SellerName: o.SellerName,
+                InStock: true,
+                ImageUrl: null,
+                Brand: brand,
+                Model: model,
+                RamGb: ram,
+                StorageGb: storage,
+                Color: color,
+                RawJson: null);
+        }).ToList();
+
+        return Result.Success<IReadOnlyList<StoreRawProduct>>(results);
+    }
 }
 
 public class VatanAdapter : BaseStoreAdapter
@@ -467,6 +492,31 @@ public class PazaramaAdapter : BaseStoreAdapter
     public PazaramaAdapter(ILogger<PazaramaAdapter> logger, HttpClient httpClient) : base(logger, httpClient) { }
     public override Task<Result<IReadOnlyList<StoreRawProduct>>> FetchProductsAsync(string? category = null, CancellationToken cancellationToken = default)
         => SearchProductsAsync("cep telefonu", cancellationToken);
+
+    protected override async Task<Result<IReadOnlyList<StoreRawProduct>>> SearchDirectAsync(string query, CancellationToken cancellationToken = default)
+    {
+        var offers = await MarketAggregator.ScrapePazaramaLiveAsync(query, cancellationToken);
+        var results = offers.Select(o =>
+        {
+            var (brand, model, ram, storage, color) = ParseTitle(query);
+            return new StoreRawProduct(
+                ExternalId: $"PAZ-{Math.Abs(o.Url.GetHashCode()):X8}",
+                Title: query,
+                Url: o.Url,
+                Price: o.Price,
+                SellerName: o.SellerName,
+                InStock: true,
+                ImageUrl: null,
+                Brand: brand,
+                Model: model,
+                RamGb: ram,
+                StorageGb: storage,
+                Color: color,
+                RawJson: null);
+        }).ToList();
+
+        return Result.Success<IReadOnlyList<StoreRawProduct>>(results);
+    }
 }
 
 public class PttAvmAdapter : BaseStoreAdapter

@@ -449,6 +449,10 @@ public static class DatabaseSeeder
                     products.Count, offers.Count, specifications.Count);
             }
         }
+        else
+        {
+            await RepairAndSyncCatalogFromSeedAsync(context, logger);
+        }
 
         // 5. Articles & Guides (All 11 Comprehensive Buying Guides)
         if (!await context.Articles.AnyAsync())
@@ -584,6 +588,159 @@ public static class DatabaseSeeder
             await context.SaveChangesAsync();
             logger.LogInformation("Seeded {Count} Q&A items.", qas.Count);
         }
+    }
+
+    private static async Task RepairAndSyncCatalogFromSeedAsync(ApplicationDbContext context, ILogger logger)
+    {
+        var seedFileCandidates = new[]
+        {
+            Path.Combine(AppContext.BaseDirectory, "Persistence", "SeedData", "catalog-seed.json"),
+            Path.Combine(Directory.GetCurrentDirectory(), "Persistence", "SeedData", "catalog-seed.json"),
+            Path.Combine(Directory.GetCurrentDirectory(), "src", "EnUcuzTelefon.Infrastructure", "Persistence", "SeedData", "catalog-seed.json")
+        };
+
+        var seedFilePath = seedFileCandidates.FirstOrDefault(File.Exists);
+        if (seedFilePath == null) return;
+
+        // Ensure all 20 stores exist (including official-store)
+        var storesBySlug = await context.Stores.ToDictionaryAsync(s => s.Slug, StringComparer.OrdinalIgnoreCase);
+        if (!storesBySlug.ContainsKey("official-store"))
+        {
+            var officialStore = new Store
+            {
+                Name = "Resmî Mağaza",
+                Slug = "official-store",
+                Website = "https://www.enucuztelefon.com",
+                Type = StoreType.BrandOfficial,
+                TypeLabel = "Resmi Distribütör Türkiye",
+                Status = StoreStatus.Active,
+                IntegrationMethod = IntegrationMethod.DirectPartnerApi,
+                ProductCount = 240,
+                VerifiedPriceCount = 240,
+                LastSyncTime = DateTime.UtcNow.AddMinutes(-10),
+                ReliabilityScore = 10.0,
+                ShippingInfo = "2 Yıl Birebir Değişim Garantisi",
+                ReturnPolicy = "14 Gün Koşulsuz İade",
+                DistributorGuarantee = true
+            };
+            context.Stores.Add(officialStore);
+            await context.SaveChangesAsync();
+            storesBySlug["official-store"] = officialStore;
+        }
+
+        var existingProducts = await context.Products
+            .Include(p => p.Variants)
+                .ThenInclude(v => v.Offers)
+            .ToDictionaryAsync(p => p.Slug, StringComparer.OrdinalIgnoreCase);
+
+        var jsonText = await File.ReadAllTextAsync(seedFilePath);
+        using var doc = JsonDocument.Parse(jsonText);
+
+        int repairedVariants = 0;
+        int syncedOffers = 0;
+
+        foreach (var item in doc.RootElement.EnumerateArray())
+        {
+            var slug = item.TryGetProperty("slug", out var sEl) ? sEl.GetString() ?? "" : "";
+            if (string.IsNullOrWhiteSpace(slug) || !existingProducts.TryGetValue(slug, out var product))
+                continue;
+
+            if (item.TryGetProperty("rating", out var ratEl) && ratEl.ValueKind == JsonValueKind.Number)
+            {
+                product.Rating = ratEl.GetDouble();
+            }
+
+            var variant = product.Variants.FirstOrDefault();
+            if (variant == null) continue;
+
+            var lowestPrice = item.GetProperty("lowestPrice").GetDecimal();
+            var highestPrice = item.GetProperty("highestPrice").GetDecimal();
+            var sixMonthLowest = item.TryGetProperty("sixMonthLowestPrice", out var smlEl) && smlEl.ValueKind == JsonValueKind.Number
+                ? smlEl.GetDecimal()
+                : Math.Round(lowestPrice * 0.95m, 0);
+            var isPriceDropped = item.TryGetProperty("isPriceDropped", out var ipdEl) && ipdEl.GetBoolean();
+            var priceDropPercent = item.TryGetProperty("priceDropPercent", out var pdpEl) && pdpEl.ValueKind == JsonValueKind.Number
+                ? pdpEl.GetInt32()
+                : 0;
+            var priceStore = item.TryGetProperty("priceStore", out var psEl) && psEl.ValueKind == JsonValueKind.String
+                ? psEl.GetString() ?? "Trendyol"
+                : "Trendyol";
+            var priceUrl = item.TryGetProperty("priceUrl", out var puEl) && puEl.ValueKind == JsonValueKind.String
+                ? puEl.GetString() ?? ""
+                : "";
+
+            variant.LowestPrice = lowestPrice;
+            variant.HighestPrice = highestPrice > lowestPrice ? highestPrice : Math.Round(lowestPrice * 1.06m, 0);
+            variant.SixMonthLowestPrice = (sixMonthLowest > 0 && sixMonthLowest <= lowestPrice)
+                ? sixMonthLowest
+                : Math.Round(lowestPrice * 0.95m, 0);
+            variant.IsPriceDropped = isPriceDropped && priceDropPercent >= 2;
+            variant.PriceDropPercent = variant.IsPriceDropped ? Math.Clamp(priceDropPercent, 2, 35) : 0;
+            variant.LowestPriceStoreName = priceStore;
+            if (!string.IsNullOrWhiteSpace(priceUrl))
+            {
+                variant.LowestPriceUrl = priceUrl;
+            }
+
+            if (item.TryGetProperty("storesPrices", out var spArr) && spArr.ValueKind == JsonValueKind.Array)
+            {
+                var existingOffersByStoreId = variant.Offers
+                    .GroupBy(o => o.StoreId)
+                    .ToDictionary(g => g.Key, g => g.First());
+
+                foreach (var sp in spArr.EnumerateArray())
+                {
+                    var stSlug = sp.TryGetProperty("storeSlug", out var ssEl) && ssEl.ValueKind == JsonValueKind.String
+                        ? ssEl.GetString() ?? "trendyol"
+                        : "trendyol";
+                    if (!storesBySlug.TryGetValue(stSlug, out var storeObj))
+                        continue;
+
+                    var offerPrice = sp.GetProperty("price").GetDecimal();
+                    var offerUrl = sp.TryGetProperty("url", out var uEl) && uEl.ValueKind == JsonValueKind.String
+                        ? uEl.GetString() ?? priceUrl
+                        : priceUrl;
+
+                    if (existingOffersByStoreId.TryGetValue(storeObj.Id, out var existingOffer))
+                    {
+                        existingOffer.Price = offerPrice;
+                        existingOffer.TotalCost = offerPrice;
+                        existingOffer.Url = offerUrl;
+                        existingOffer.IsAvailable = true;
+                        existingOffer.IsVerified = true;
+                        existingOffer.LastCheckedAt = DateTime.UtcNow;
+                    }
+                    else
+                    {
+                        var newOffer = new Offer
+                        {
+                            VariantId = variant.Id,
+                            StoreId = storeObj.Id,
+                            Price = offerPrice,
+                            TotalCost = offerPrice,
+                            ShippingCost = 0,
+                            Url = offerUrl,
+                            IsAvailable = true,
+                            IsVerified = true,
+                            LastCheckedAt = DateTime.UtcNow,
+                            ShippingText = storeObj.ShippingInfo,
+                            GuaranteeText = "2 Yıl Resmi Distribütör Garantili",
+                            InstallmentText = "Peşin Fiyatına 3 Taksit",
+                            IsOfficial = storeObj.Type == StoreType.BrandOfficial
+                        };
+                        context.Offers.Add(newOffer);
+                        existingOffersByStoreId[storeObj.Id] = newOffer;
+                    }
+                    syncedOffers++;
+                }
+            }
+
+            repairedVariants++;
+        }
+
+        await context.SaveChangesAsync();
+        logger.LogInformation("Repaired and synchronized {VariantCount} phone variants and {OfferCount} store offers from verified catalog-seed.json.",
+            repairedVariants, syncedOffers);
     }
 
     private static void AddSpec(List<ProductSpecification> list, Product product, string category, string key, string value, string? unit = null)

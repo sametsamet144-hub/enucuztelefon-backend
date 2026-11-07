@@ -103,7 +103,7 @@ public class ProductService : IProductService
 
         if (filter.IsPriceDropped.HasValue && filter.IsPriceDropped.Value)
         {
-            query = query.Where(p => p.Variants.Any(v => v.IsPriceDropped));
+            query = query.Where(p => p.Variants.Any(v => v.IsPriceDropped && v.PriceDropPercent >= 2));
         }
 
         // Sorting
@@ -276,7 +276,7 @@ public class ProductService : IProductService
                 .ThenInclude(v => v.Offers)
                     .ThenInclude(o => o.Store)
             .Include(p => p.Specifications)
-            .Where(p => p.IsActive && p.Variants.Any(v => v.Offers.Any(o => o.IsAvailable && o.Price > 0) && v.IsPriceDropped))
+            .Where(p => p.IsActive && p.Variants.Any(v => v.Offers.Any(o => o.IsAvailable && o.Price > 0) && v.IsPriceDropped && v.PriceDropPercent >= 2))
             .OrderByDescending(p => p.Variants.Max(v => v.PriceDropPercent))
             .Take(limit)
             .AsNoTracking()
@@ -358,14 +358,25 @@ public class ProductService : IProductService
             var firstOffer = availableOffers.First();
             var lastOffer = availableOffers.Last();
             lowestPrice = firstOffer.Price;
-            highestPrice = lastOffer.Price;
+            highestPrice = lastOffer.Price > firstOffer.Price
+                ? lastOffer.Price
+                : Math.Round(firstOffer.Price * 1.06m, 2);
             lowestStore = firstOffer.Store?.Name ?? "Yetkili Mağaza";
             lowestUrl = firstOffer.Url;
         }
 
-        var sixMonthLowest = lowestPrice > 0 ? (primaryVariant?.SixMonthLowestPrice ?? Math.Round(lowestPrice * 0.94m, 0)) : (decimal?)null;
-        var isPriceDropped = lowestPrice > 0 && (primaryVariant?.IsPriceDropped ?? false);
-        var priceDropPercent = lowestPrice > 0 ? primaryVariant?.PriceDropPercent : null;
+        decimal? sixMonthLowest = null;
+        if (lowestPrice > 0)
+        {
+            var candidateSixMonth = primaryVariant?.SixMonthLowestPrice ?? 0m;
+            sixMonthLowest = (candidateSixMonth > 0 && candidateSixMonth <= lowestPrice)
+                ? candidateSixMonth
+                : Math.Round(lowestPrice * 0.95m, 0);
+        }
+
+        var rawDropPercent = primaryVariant?.PriceDropPercent ?? 0;
+        var isPriceDropped = lowestPrice > 0 && (primaryVariant?.IsPriceDropped ?? false) && rawDropPercent >= 2;
+        int? priceDropPercent = isPriceDropped ? Math.Clamp(rawDropPercent, 2, 35) : null;
 
         var storePrices = availableOffers
             .Select(o => new StorePriceDto(

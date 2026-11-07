@@ -1,4 +1,5 @@
 using System.Text;
+using EnUcuzTelefon.Application.Interfaces;
 using EnUcuzTelefon.Application.Services;
 using EnUcuzTelefon.Api.Services;
 using EnUcuzTelefon.Infrastructure;
@@ -172,6 +173,15 @@ using (var scope = app.Services.CreateScope())
         var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
         var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
         await DatabaseSeeder.SeedAsync(db, userManager, roleManager, logger);
+
+        var cacheService = services.GetService<ICacheService>();
+        if (cacheService != null)
+        {
+            await cacheService.RemoveByPrefixAsync("products:");
+            await cacheService.RemoveByPrefixAsync("phone:");
+            await cacheService.RemoveByPrefixAsync("deals:");
+        }
+
         logger.LogInformation("Database initialized and verified successfully.");
 
         // Automatically trigger immediate store sync across all active stores on startup

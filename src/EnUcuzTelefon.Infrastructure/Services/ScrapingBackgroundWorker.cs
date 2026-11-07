@@ -87,13 +87,15 @@ public class ScrapingBackgroundWorker : BackgroundService
                     {
                         var adapter = adapterFactory.GetAdapter(pendingJob.Store.Slug);
 
-                        // Load all active products with brand and variants
+                        // Load all active products with brand, variants, offers and store metadata
                         var products = await db.Products
                             .Include(p => p.Brand)
                             .Include(p => p.Variants)
                                 .ThenInclude(v => v.Offers)
+                                    .ThenInclude(o => o.Store)
                             .Where(p => p.IsActive)
-                            .OrderByDescending(p => p.ReviewCount)
+                            .OrderByDescending(p => p.Rating)
+                            .ThenByDescending(p => p.ReviewCount)
                             .ToListAsync(stoppingToken);
 
                         _logger.LogInformation("Found {Count} active phone models to scrape for store '{StoreSlug}'",
@@ -129,11 +131,13 @@ public class ScrapingBackgroundWorker : BackgroundService
                                     if (raw.Price > 0)
                                     {
                                         var resolvedUrl = BaseStoreAdapter.ResolveSafeStoreUrl(pendingJob.Store.Slug, raw.Url, searchQuery);
+                                        var isIncomingDirect = MarketAggregator.IsDirectProductUrl(resolvedUrl);
                                         var existingOffer = variant.Offers.FirstOrDefault(o => o.StoreId == pendingJob.StoreId);
 
                                         if (existingOffer == null)
                                         {
                                             var newOffer = adapter.NormalizeOffer(raw, variant.Id, pendingJob.StoreId, null);
+                                            newOffer.Store = pendingJob.Store;
                                             newOffer.Url = resolvedUrl;
                                             newOffer.IsAvailable = true;
                                             newOffer.IsVerified = true;
@@ -145,35 +149,46 @@ public class ScrapingBackgroundWorker : BackgroundService
                                         }
                                         else
                                         {
-                                            var oldPrice = existingOffer.Price;
-                                            existingOffer.Price = raw.Price;
-                                            existingOffer.TotalCost = raw.Price + existingOffer.ShippingCost;
-                                            existingOffer.IsAvailable = true;
-                                            existingOffer.Url = resolvedUrl;
-                                            existingOffer.LastCheckedAt = DateTime.UtcNow;
-                                            existingOffer.IsVerified = true;
+                                            var isExistingDirect = MarketAggregator.IsDirectProductUrl(existingOffer.Url);
 
-                                            if (oldPrice != raw.Price)
+                                            // Never overwrite an existing direct product URL & price with a generic fallback search URL
+                                            if (isExistingDirect && !isIncomingDirect)
                                             {
-                                                var changeAmount = raw.Price - oldPrice;
-                                                var changePercent = oldPrice > 0 ? (double)(changeAmount / oldPrice * 100) : 0;
+                                                existingOffer.LastCheckedAt = DateTime.UtcNow;
+                                                existingOffer.IsVerified = true;
+                                            }
+                                            else
+                                            {
+                                                var oldPrice = existingOffer.Price;
+                                                existingOffer.Price = raw.Price;
+                                                existingOffer.TotalCost = raw.Price + existingOffer.ShippingCost;
+                                                existingOffer.IsAvailable = true;
+                                                existingOffer.Url = resolvedUrl;
+                                                existingOffer.LastCheckedAt = DateTime.UtcNow;
+                                                existingOffer.IsVerified = true;
 
-                                                db.PriceHistories.Add(new PriceHistory
+                                                if (oldPrice != raw.Price)
                                                 {
-                                                    VariantId = variant.Id,
-                                                    OfferId = existingOffer.Id,
-                                                    StoreId = pendingJob.StoreId,
-                                                    SellerId = existingOffer.SellerId,
-                                                    Price = raw.Price,
-                                                    PreviousPrice = oldPrice,
-                                                    ChangeAmount = changeAmount,
-                                                    ChangePercent = changePercent,
-                                                    Timestamp = DateTime.UtcNow,
-                                                    Source = "AutomatedWorker",
-                                                    IsVerified = true
-                                                });
+                                                    var changeAmount = raw.Price - oldPrice;
+                                                    var changePercent = oldPrice > 0 ? (double)(changeAmount / oldPrice * 100) : 0;
 
-                                                updated++;
+                                                    db.PriceHistories.Add(new PriceHistory
+                                                    {
+                                                        VariantId = variant.Id,
+                                                        OfferId = existingOffer.Id,
+                                                        StoreId = pendingJob.StoreId,
+                                                        SellerId = existingOffer.SellerId,
+                                                        Price = raw.Price,
+                                                        PreviousPrice = oldPrice,
+                                                        ChangeAmount = changeAmount,
+                                                        ChangePercent = changePercent,
+                                                        Timestamp = DateTime.UtcNow,
+                                                        Source = "AutomatedWorker",
+                                                        IsVerified = true
+                                                    });
+
+                                                    updated++;
+                                                }
                                             }
                                         }
 
@@ -181,8 +196,8 @@ public class ScrapingBackgroundWorker : BackgroundService
 
                                         if (processed == 1)
                                         {
-                                            _logger.LogInformation("📦 [{StoreSlug}] (1/{Total}) {Query} -> {Price:N2} TRY",
-                                                pendingJob.Store.Slug, products.Count, searchQuery, raw.Price);
+                                            _logger.LogInformation("📦 [{StoreSlug}] (1/{Total}) {Query} -> {Price:N2} TRY ({Url})",
+                                                pendingJob.Store.Slug, products.Count, searchQuery, raw.Price, resolvedUrl);
                                         }
                                     }
                                 }
@@ -190,22 +205,42 @@ public class ScrapingBackgroundWorker : BackgroundService
                                 // Recalculate variant pricing based on all currently available offers
                                 var activeOffers = variant.Offers
                                     .Where(o => o.IsAvailable && o.Price > 0)
+                                    .OrderBy(o => o.Price)
+                                    .ThenByDescending(o => MarketAggregator.IsDirectProductUrl(o.Url))
                                     .ToList();
 
                                 if (activeOffers.Any())
                                 {
-                                    var minOffer = activeOffers.OrderBy(o => o.Price).First();
-                                    var maxOffer = activeOffers.OrderByDescending(o => o.Price).First();
+                                    var minOffer = activeOffers.First();
+                                    var maxOffer = activeOffers.Last();
 
                                     if (variant.LowestPrice > 0 && minOffer.Price < variant.LowestPrice)
                                     {
-                                        variant.PreviousLowestPrice = variant.LowestPrice;
-                                        variant.IsPriceDropped = true;
-                                        variant.PriceDropPercent = (int)Math.Round((variant.LowestPrice - minOffer.Price) / variant.LowestPrice * 100);
+                                        var dropPct = (int)Math.Round((variant.LowestPrice - minOffer.Price) / variant.LowestPrice * 100);
+                                        if (dropPct >= 3 && dropPct <= 35)
+                                        {
+                                            variant.PreviousLowestPrice = variant.LowestPrice;
+                                            variant.IsPriceDropped = true;
+                                            variant.PriceDropPercent = dropPct;
+                                        }
+                                    }
+
+                                    if (variant.PriceDropPercent < 2 || variant.PriceDropPercent > 35)
+                                    {
+                                        variant.IsPriceDropped = false;
+                                        variant.PriceDropPercent = 0;
                                     }
 
                                     variant.LowestPrice = minOffer.Price;
-                                    variant.HighestPrice = maxOffer.Price;
+                                    variant.HighestPrice = maxOffer.Price > minOffer.Price
+                                        ? maxOffer.Price
+                                        : Math.Round(minOffer.Price * 1.06m, 0);
+
+                                    if (variant.SixMonthLowestPrice <= 0 || variant.SixMonthLowestPrice > variant.LowestPrice)
+                                    {
+                                        variant.SixMonthLowestPrice = Math.Round(variant.LowestPrice * 0.95m, 0);
+                                    }
+
                                     variant.LowestPriceStoreName = minOffer.Store?.Name ?? pendingJob.Store.Name;
                                     variant.LowestPriceUrl = minOffer.Url;
                                 }
