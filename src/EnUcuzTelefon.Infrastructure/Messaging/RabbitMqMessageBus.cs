@@ -1,3 +1,4 @@
+using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Channels;
@@ -22,6 +23,12 @@ public class RabbitMqMessageBus : IMessageBus, IDisposable
         var userName = configuration["RabbitMQ:UserName"] ?? "guest";
         var password = configuration["RabbitMQ:Password"] ?? "guest";
 
+        if (!IsBrokerReachable(hostName, 5672))
+        {
+            _logger.LogInformation("RabbitMQ broker at {Host} is not active. Using in-memory message channel.", hostName);
+            return;
+        }
+
         try
         {
             var factory = new ConnectionFactory
@@ -39,7 +46,24 @@ public class RabbitMqMessageBus : IMessageBus, IDisposable
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "RabbitMQ broker at {Host} unreachable. Using in-memory channel.", hostName);
+            _logger.LogInformation("RabbitMQ broker at {Host} unreachable ({Reason}). Using in-memory message channel.", hostName, ex.GetType().Name);
+        }
+    }
+
+    private static bool IsBrokerReachable(string host, int port)
+    {
+        try
+        {
+            using var client = new TcpClient();
+            var result = client.BeginConnect(host, port, null, null);
+            var success = result.AsyncWaitHandle.WaitOne(TimeSpan.FromMilliseconds(350));
+            if (!success) return false;
+            client.EndConnect(result);
+            return true;
+        }
+        catch
+        {
+            return false;
         }
     }
 
@@ -68,17 +92,17 @@ public class RabbitMqMessageBus : IMessageBus, IDisposable
                     basicProperties: properties,
                     body: body);
 
-                _logger.LogInformation("Message published to RabbitMQ queue {QueueName}", queueName);
+                _logger.LogDebug("Message published to RabbitMQ queue {QueueName}", queueName);
                 return Task.CompletedTask;
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Error publishing to RabbitMQ queue {QueueName}. Falling back to internal queue.", queueName);
+                _logger.LogWarning("Error publishing to RabbitMQ queue {QueueName} ({Reason}). Falling back to internal queue.", queueName, ex.Message);
             }
         }
 
         _inMemoryQueue.Writer.TryWrite(json);
-        _logger.LogInformation("Message queued to internal channel for {QueueName}", queueName);
+        _logger.LogDebug("Message queued to internal channel for {QueueName}", queueName);
         return Task.CompletedTask;
     }
 

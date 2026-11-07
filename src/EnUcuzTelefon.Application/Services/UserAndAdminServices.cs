@@ -184,25 +184,56 @@ public class AdminService : IAdminService
             .Where(s => s.Status == StoreStatus.Active && s.IsActive)
             .ToListAsync(cancellationToken);
 
-        int dispatched = 0;
+        // Reset any interrupted Running jobs from previous process lifecycle back to Pending
+        var staleRunningJobs = await _context.ScrapingJobs
+            .Where(j => j.Status == JobStatus.Running)
+            .ToListAsync(cancellationToken);
+
+        foreach (var stale in staleRunningJobs)
+        {
+            stale.Status = JobStatus.Pending;
+        }
+
+        var existingPendingStoreIds = (await _context.ScrapingJobs
+            .Where(j => j.Status == JobStatus.Pending)
+            .Select(j => j.StoreId)
+            .ToListAsync(cancellationToken))
+            .ToHashSet();
+
+        var newJobs = new List<(ScrapingJob Job, string Slug)>();
+        var baseTime = DateTime.UtcNow;
+        int offsetSeconds = 0;
+
         foreach (var store in activeStores)
         {
+            if (existingPendingStoreIds.Contains(store.Id))
+            {
+                continue;
+            }
+
             var job = new ScrapingJob
             {
                 StoreId = store.Id,
                 JobType = "AdminAllOrStartupSync",
                 Status = JobStatus.Pending,
-                StartedAt = DateTime.UtcNow
+                StartedAt = baseTime.AddSeconds(offsetSeconds++)
             };
 
             _context.ScrapingJobs.Add(job);
-            await _context.SaveChangesAsync(cancellationToken);
-
-            await _bus.PublishAsync("store-sync-queue", new StoreSyncMessage(job.Id, store.Slug, DateTime.UtcNow), cancellationToken);
-            dispatched++;
+            newJobs.Add((job, store.Slug));
         }
 
-        return Result.Success(dispatched);
+        if (newJobs.Any() || staleRunningJobs.Any())
+        {
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+
+        foreach (var item in newJobs)
+        {
+            await _bus.PublishAsync("store-sync-queue", new StoreSyncMessage(item.Job.Id, item.Slug, DateTime.UtcNow), cancellationToken);
+        }
+
+        return Result.Success(activeStores.Count);
     }
 
     public async Task<IReadOnlyList<PriceAnomaly>> GetAnomaliesAsync(CancellationToken cancellationToken = default)

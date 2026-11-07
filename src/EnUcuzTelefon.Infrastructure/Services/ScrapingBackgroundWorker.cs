@@ -34,7 +34,7 @@ public class ScrapingBackgroundWorker : BackgroundService
                 using var scope = _serviceProvider.CreateScope();
                 var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
                 var adapterFactory = scope.ServiceProvider.GetRequiredService<IStoreAdapterFactory>();
-                var priceVerification = scope.ServiceProvider.GetRequiredService<IPriceVerificationService>();
+                var cache = scope.ServiceProvider.GetRequiredService<ICacheService>();
 
                 // 1. Check for pending scraping jobs
                 var pendingJob = await db.ScrapingJobs
@@ -101,10 +101,12 @@ public class ScrapingBackgroundWorker : BackgroundService
 
                         int processed = 0;
                         int updated = 0;
+                        int productIndex = 0;
 
                         foreach (var product in products)
                         {
                             if (stoppingToken.IsCancellationRequested) break;
+                            productIndex++;
 
                             var variants = product.Variants.ToList();
                             if (!variants.Any()) continue;
@@ -126,11 +128,13 @@ public class ScrapingBackgroundWorker : BackgroundService
 
                                     if (raw.Price > 0)
                                     {
+                                        var resolvedUrl = BaseStoreAdapter.ResolveSafeStoreUrl(pendingJob.Store.Slug, raw.Url, searchQuery);
                                         var existingOffer = variant.Offers.FirstOrDefault(o => o.StoreId == pendingJob.StoreId);
 
                                         if (existingOffer == null)
                                         {
                                             var newOffer = adapter.NormalizeOffer(raw, variant.Id, pendingJob.StoreId, null);
+                                            newOffer.Url = resolvedUrl;
                                             newOffer.IsAvailable = true;
                                             newOffer.IsVerified = true;
                                             newOffer.LastCheckedAt = DateTime.UtcNow;
@@ -141,30 +145,45 @@ public class ScrapingBackgroundWorker : BackgroundService
                                         }
                                         else
                                         {
+                                            var oldPrice = existingOffer.Price;
                                             existingOffer.Price = raw.Price;
                                             existingOffer.TotalCost = raw.Price + existingOffer.ShippingCost;
                                             existingOffer.IsAvailable = true;
-                                            existingOffer.Url = raw.Url;
+                                            existingOffer.Url = resolvedUrl;
                                             existingOffer.LastCheckedAt = DateTime.UtcNow;
                                             existingOffer.IsVerified = true;
 
-                                            var changeResult = await priceVerification.VerifyAndRecordPriceChangeAsync(
-                                                variant.Id,
-                                                pendingJob.StoreId,
-                                                existingOffer.SellerId,
-                                                existingOffer.Id,
-                                                existingOffer.Price,
-                                                existingOffer.ShippingCost,
-                                                existingOffer.IsAvailable,
-                                                stoppingToken);
-
-                                            if (changeResult.IsSuccess && changeResult.Value)
+                                            if (oldPrice != raw.Price)
                                             {
+                                                var changeAmount = raw.Price - oldPrice;
+                                                var changePercent = oldPrice > 0 ? (double)(changeAmount / oldPrice * 100) : 0;
+
+                                                db.PriceHistories.Add(new PriceHistory
+                                                {
+                                                    VariantId = variant.Id,
+                                                    OfferId = existingOffer.Id,
+                                                    StoreId = pendingJob.StoreId,
+                                                    SellerId = existingOffer.SellerId,
+                                                    Price = raw.Price,
+                                                    PreviousPrice = oldPrice,
+                                                    ChangeAmount = changeAmount,
+                                                    ChangePercent = changePercent,
+                                                    Timestamp = DateTime.UtcNow,
+                                                    Source = "AutomatedWorker",
+                                                    IsVerified = true
+                                                });
+
                                                 updated++;
                                             }
                                         }
 
                                         processed++;
+
+                                        if (processed == 1)
+                                        {
+                                            _logger.LogInformation("📦 [{StoreSlug}] (1/{Total}) {Query} -> {Price:N2} TRY",
+                                                pendingJob.Store.Slug, products.Count, searchQuery, raw.Price);
+                                        }
                                     }
                                 }
 
@@ -192,15 +211,18 @@ public class ScrapingBackgroundWorker : BackgroundService
                                 }
 
                                 // Controlled rate limit between variant queries
-                                await Task.Delay(100, stoppingToken);
+                                await Task.Delay(50, stoppingToken);
                             }
 
-                            // Periodically persist progress to DB every 5 products
-                            if (processed > 0 && processed % 5 == 0)
+                            // Periodically persist progress to DB and log status every 15 products
+                            if (productIndex % 15 == 0)
                             {
                                 pendingJob.ItemsProcessed = processed;
                                 pendingJob.ItemsUpdated = updated;
                                 await db.SaveChangesAsync(stoppingToken);
+                                await cache.RemoveByPrefixAsync("products:", stoppingToken);
+                                _logger.LogInformation("📊 [{StoreSlug}] Scraping progress: {Processed}/{Total} models processed ({Updated} offers updated)",
+                                    pendingJob.Store.Slug, productIndex, products.Count, updated);
                             }
                         }
 
@@ -214,6 +236,11 @@ public class ScrapingBackgroundWorker : BackgroundService
                         pendingJob.Store.ProductCount = processed;
                         pendingJob.Store.VerifiedPriceCount = updated;
 
+                        await db.SaveChangesAsync(stoppingToken);
+                        await cache.RemoveByPrefixAsync("products:", stoppingToken);
+                        await cache.RemoveByPrefixAsync("phone:", stoppingToken);
+                        await cache.RemoveByPrefixAsync("deals:", stoppingToken);
+
                         _logger.LogInformation("✅ Completed scraping job {JobId} for store '{StoreSlug}': {Processed} items processed, {Updated} offers updated",
                             pendingJob.Id, pendingJob.Store.Slug, processed, updated);
                     }
@@ -223,9 +250,9 @@ public class ScrapingBackgroundWorker : BackgroundService
                         pendingJob.ErrorMessage = ex.Message;
                         pendingJob.CompletedAt = DateTime.UtcNow;
                         _logger.LogError(ex, "Failed executing scraping job {JobId}", pendingJob.Id);
+                        await db.SaveChangesAsync(stoppingToken);
                     }
 
-                    await db.SaveChangesAsync(stoppingToken);
                     continue; // Immediately check next job without waiting
                 }
             }

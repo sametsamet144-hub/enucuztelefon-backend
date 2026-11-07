@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Net.Sockets;
 using System.Text.Json;
 using EnUcuzTelefon.Application.Interfaces;
 using Microsoft.Extensions.Configuration;
@@ -25,26 +26,56 @@ public class RedisCacheService : ICacheService
             {
                 var options = ConfigurationOptions.Parse(connectionString);
                 options.AbortOnConnectFail = false;
-                options.ConnectTimeout = 2000;
-                _redis = ConnectionMultiplexer.Connect(options);
-                if (_redis.IsConnected)
+                options.ConnectTimeout = 1000;
+
+                if (IsEndpointReachable(options))
                 {
-                    _db = _redis.GetDatabase();
-                    _logger.LogInformation("Successfully connected to Redis distributed cache.");
+                    _redis = ConnectionMultiplexer.Connect(options);
+                    if (_redis.IsConnected)
+                    {
+                        _db = _redis.GetDatabase();
+                        _logger.LogInformation("Successfully connected to Redis distributed cache.");
+                    }
+                    else
+                    {
+                        _logger.LogInformation("Redis server not immediately reachable. In-memory cache fallback active.");
+                    }
                 }
                 else
                 {
-                    _logger.LogWarning("Redis server not immediately reachable. In-memory cache fallback active.");
+                    _logger.LogInformation("Redis server is not active. In-memory cache fallback active.");
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to connect to Redis. Falling back to in-memory cache.");
+                _logger.LogInformation("Redis server unavailable ({Reason}). Falling back to in-memory cache.", ex.GetType().Name);
             }
         }
         else
         {
             _logger.LogInformation("Redis connection string not provided. Using in-memory fallback cache.");
+        }
+    }
+
+    private static bool IsEndpointReachable(ConfigurationOptions options)
+    {
+        try
+        {
+            var ep = options.EndPoints.FirstOrDefault();
+            if (ep is System.Net.DnsEndPoint dns)
+            {
+                using var client = new TcpClient();
+                var result = client.BeginConnect(dns.Host, dns.Port == 0 ? 6379 : dns.Port, null, null);
+                var success = result.AsyncWaitHandle.WaitOne(TimeSpan.FromMilliseconds(350));
+                if (!success) return false;
+                client.EndConnect(result);
+                return true;
+            }
+            return true;
+        }
+        catch
+        {
+            return false;
         }
     }
 
@@ -63,7 +94,7 @@ public class RedisCacheService : ICacheService
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Redis GET error for key {Key}, checking in-memory fallback", key);
+                _logger.LogDebug(ex, "Redis GET error for key {Key}, checking in-memory fallback", key);
             }
         }
 
@@ -93,7 +124,7 @@ public class RedisCacheService : ICacheService
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Redis SET error for key {Key}, using in-memory fallback", key);
+                _logger.LogDebug(ex, "Redis SET error for key {Key}, using in-memory fallback", key);
             }
         }
 
@@ -113,7 +144,7 @@ public class RedisCacheService : ICacheService
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Redis DELETE error for key {Key}", key);
+                _logger.LogDebug(ex, "Redis DELETE error for key {Key}", key);
             }
         }
 
@@ -139,7 +170,7 @@ public class RedisCacheService : ICacheService
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Redis RemoveByPrefix error for {Prefix}", prefix);
+                _logger.LogDebug(ex, "Redis RemoveByPrefix error for {Prefix}", prefix);
             }
         }
 

@@ -568,6 +568,15 @@ public class XiaomiStoreAdapter : BaseStoreAdapter
         => SearchProductsAsync("cep telefonu", cancellationToken);
 }
 
+public class OfficialStoreAdapter : BaseStoreAdapter
+{
+    public override string StoreSlug => "official-store";
+    public override string StoreName => "Resmî Mağaza";
+    public OfficialStoreAdapter(ILogger<OfficialStoreAdapter> logger, HttpClient httpClient) : base(logger, httpClient) { }
+    public override Task<Result<IReadOnlyList<StoreRawProduct>>> FetchProductsAsync(string? category = null, CancellationToken cancellationToken = default)
+        => SearchProductsAsync("cep telefonu", cancellationToken);
+}
+
 public class StoreAdapterFactory : IStoreAdapterFactory
 {
     private readonly IEnumerable<IStoreAdapter> _adapters;

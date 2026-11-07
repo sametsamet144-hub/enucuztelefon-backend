@@ -95,6 +95,7 @@ public static class DependencyInjection
         services.AddScoped<IStoreAdapter, AppleStoreAdapter>();
         services.AddScoped<IStoreAdapter, SamsungStoreAdapter>();
         services.AddScoped<IStoreAdapter, XiaomiStoreAdapter>();
+        services.AddScoped<IStoreAdapter, OfficialStoreAdapter>();
 
         services.AddScoped<IStoreAdapterFactory, StoreAdapterFactory>();
 
