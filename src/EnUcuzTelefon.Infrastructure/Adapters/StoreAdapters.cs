@@ -485,40 +485,6 @@ public class N11Adapter : BaseStoreAdapter
     }
 }
 
-public class PazaramaAdapter : BaseStoreAdapter
-{
-    public override string StoreSlug => "pazarama";
-    public override string StoreName => "Pazarama";
-    public PazaramaAdapter(ILogger<PazaramaAdapter> logger, HttpClient httpClient) : base(logger, httpClient) { }
-    public override Task<Result<IReadOnlyList<StoreRawProduct>>> FetchProductsAsync(string? category = null, CancellationToken cancellationToken = default)
-        => SearchProductsAsync("cep telefonu", cancellationToken);
-
-    protected override async Task<Result<IReadOnlyList<StoreRawProduct>>> SearchDirectAsync(string query, CancellationToken cancellationToken = default)
-    {
-        var offers = await MarketAggregator.ScrapePazaramaLiveAsync(query, cancellationToken);
-        var results = offers.Select(o =>
-        {
-            var (brand, model, ram, storage, color) = ParseTitle(query);
-            return new StoreRawProduct(
-                ExternalId: $"PAZ-{Math.Abs(o.Url.GetHashCode()):X8}",
-                Title: query,
-                Url: o.Url,
-                Price: o.Price,
-                SellerName: o.SellerName,
-                InStock: true,
-                ImageUrl: null,
-                Brand: brand,
-                Model: model,
-                RamGb: ram,
-                StorageGb: storage,
-                Color: color,
-                RawJson: null);
-        }).ToList();
-
-        return Result.Success<IReadOnlyList<StoreRawProduct>>(results);
-    }
-}
-
 public class PttAvmAdapter : BaseStoreAdapter
 {
     public override string StoreSlug => "pttavm";
@@ -531,7 +497,7 @@ public class PttAvmAdapter : BaseStoreAdapter
 public class TurkcellPasajAdapter : BaseStoreAdapter
 {
     public override string StoreSlug => "turkcell";
-    public override string StoreName => "Turkcell Pasaj";
+    public override string StoreName => "Turkcell (Turkcell Pasaj)";
     public TurkcellPasajAdapter(ILogger<TurkcellPasajAdapter> logger, HttpClient httpClient) : base(logger, httpClient) { }
     public override Task<Result<IReadOnlyList<StoreRawProduct>>> FetchProductsAsync(string? category = null, CancellationToken cancellationToken = default)
         => SearchProductsAsync("cep telefonu", cancellationToken);
@@ -540,7 +506,7 @@ public class TurkcellPasajAdapter : BaseStoreAdapter
 public class VodafoneAdapter : BaseStoreAdapter
 {
     public override string StoreSlug => "vodafone";
-    public override string StoreName => "Vodafone Yanımda";
+    public override string StoreName => "Vodafone (Her Şey Yanımda)";
     public VodafoneAdapter(ILogger<VodafoneAdapter> logger, HttpClient httpClient) : base(logger, httpClient) { }
     public override Task<Result<IReadOnlyList<StoreRawProduct>>> FetchProductsAsync(string? category = null, CancellationToken cancellationToken = default)
         => SearchProductsAsync("cep telefonu", cancellationToken);
@@ -555,37 +521,10 @@ public class TurkTelekomAdapter : BaseStoreAdapter
         => SearchProductsAsync("cep telefonu", cancellationToken);
 }
 
-public class ItopyaAdapter : BaseStoreAdapter
-{
-    public override string StoreSlug => "itopya";
-    public override string StoreName => "İtopya";
-    public ItopyaAdapter(ILogger<ItopyaAdapter> logger, HttpClient httpClient) : base(logger, httpClient) { }
-    public override Task<Result<IReadOnlyList<StoreRawProduct>>> FetchProductsAsync(string? category = null, CancellationToken cancellationToken = default)
-        => SearchProductsAsync("cep telefonu", cancellationToken);
-}
-
-public class SinerjiAdapter : BaseStoreAdapter
-{
-    public override string StoreSlug => "sinerji";
-    public override string StoreName => "Sinerji";
-    public SinerjiAdapter(ILogger<SinerjiAdapter> logger, HttpClient httpClient) : base(logger, httpClient) { }
-    public override Task<Result<IReadOnlyList<StoreRawProduct>>> FetchProductsAsync(string? category = null, CancellationToken cancellationToken = default)
-        => SearchProductsAsync("cep telefonu", cancellationToken);
-}
-
-public class IncehesapAdapter : BaseStoreAdapter
-{
-    public override string StoreSlug => "incehesap";
-    public override string StoreName => "İncehesap";
-    public IncehesapAdapter(ILogger<IncehesapAdapter> logger, HttpClient httpClient) : base(logger, httpClient) { }
-    public override Task<Result<IReadOnlyList<StoreRawProduct>>> FetchProductsAsync(string? category = null, CancellationToken cancellationToken = default)
-        => SearchProductsAsync("cep telefonu", cancellationToken);
-}
-
 public class CicekSepetiAdapter : BaseStoreAdapter
 {
     public override string StoreSlug => "ciceksepeti";
-    public override string StoreName => "ÇiçekSepeti";
+    public override string StoreName => "Çiçeksepeti";
     public CicekSepetiAdapter(ILogger<CicekSepetiAdapter> logger, HttpClient httpClient) : base(logger, httpClient) { }
     public override Task<Result<IReadOnlyList<StoreRawProduct>>> FetchProductsAsync(string? category = null, CancellationToken cancellationToken = default)
         => SearchProductsAsync("cep telefonu", cancellationToken);
@@ -594,7 +533,7 @@ public class CicekSepetiAdapter : BaseStoreAdapter
 public class AppleStoreAdapter : BaseStoreAdapter
 {
     public override string StoreSlug => "applestore";
-    public override string StoreName => "Apple Store TR";
+    public override string StoreName => "Apple Store";
     public AppleStoreAdapter(ILogger<AppleStoreAdapter> logger, HttpClient httpClient) : base(logger, httpClient) { }
     public override Task<Result<IReadOnlyList<StoreRawProduct>>> FetchProductsAsync(string? category = null, CancellationToken cancellationToken = default)
         => SearchProductsAsync("cep telefonu", cancellationToken);
@@ -603,7 +542,7 @@ public class AppleStoreAdapter : BaseStoreAdapter
 public class SamsungStoreAdapter : BaseStoreAdapter
 {
     public override string StoreSlug => "samsungstore";
-    public override string StoreName => "Samsung Store TR";
+    public override string StoreName => "Samsung Store";
     public SamsungStoreAdapter(ILogger<SamsungStoreAdapter> logger, HttpClient httpClient) : base(logger, httpClient) { }
     public override Task<Result<IReadOnlyList<StoreRawProduct>>> FetchProductsAsync(string? category = null, CancellationToken cancellationToken = default)
         => SearchProductsAsync("cep telefonu", cancellationToken);
@@ -612,17 +551,134 @@ public class SamsungStoreAdapter : BaseStoreAdapter
 public class XiaomiStoreAdapter : BaseStoreAdapter
 {
     public override string StoreSlug => "mistore";
-    public override string StoreName => "Mi Store TR";
+    public override string StoreName => "Mi Store (Xiaomi)";
     public XiaomiStoreAdapter(ILogger<XiaomiStoreAdapter> logger, HttpClient httpClient) : base(logger, httpClient) { }
     public override Task<Result<IReadOnlyList<StoreRawProduct>>> FetchProductsAsync(string? category = null, CancellationToken cancellationToken = default)
         => SearchProductsAsync("cep telefonu", cancellationToken);
 }
 
-public class OfficialStoreAdapter : BaseStoreAdapter
+public class HuaweiStoreAdapter : BaseStoreAdapter
 {
-    public override string StoreSlug => "official-store";
-    public override string StoreName => "Resmî Mağaza";
-    public OfficialStoreAdapter(ILogger<OfficialStoreAdapter> logger, HttpClient httpClient) : base(logger, httpClient) { }
+    public override string StoreSlug => "huaweistore";
+    public override string StoreName => "Huawei Store";
+    public HuaweiStoreAdapter(ILogger<HuaweiStoreAdapter> logger, HttpClient httpClient) : base(logger, httpClient) { }
+    public override Task<Result<IReadOnlyList<StoreRawProduct>>> FetchProductsAsync(string? category = null, CancellationToken cancellationToken = default)
+        => SearchProductsAsync("cep telefonu", cancellationToken);
+}
+
+public class HonorStoreAdapter : BaseStoreAdapter
+{
+    public override string StoreSlug => "honorstore";
+    public override string StoreName => "Honor";
+    public HonorStoreAdapter(ILogger<HonorStoreAdapter> logger, HttpClient httpClient) : base(logger, httpClient) { }
+    public override Task<Result<IReadOnlyList<StoreRawProduct>>> FetchProductsAsync(string? category = null, CancellationToken cancellationToken = default)
+        => SearchProductsAsync("cep telefonu", cancellationToken);
+}
+
+public class TecnoStoreAdapter : BaseStoreAdapter
+{
+    public override string StoreSlug => "tecnostore";
+    public override string StoreName => "Tecno";
+    public TecnoStoreAdapter(ILogger<TecnoStoreAdapter> logger, HttpClient httpClient) : base(logger, httpClient) { }
+    public override Task<Result<IReadOnlyList<StoreRawProduct>>> FetchProductsAsync(string? category = null, CancellationToken cancellationToken = default)
+        => SearchProductsAsync("cep telefonu", cancellationToken);
+}
+
+public class InfinixStoreAdapter : BaseStoreAdapter
+{
+    public override string StoreSlug => "infinixstore";
+    public override string StoreName => "Infinix";
+    public InfinixStoreAdapter(ILogger<InfinixStoreAdapter> logger, HttpClient httpClient) : base(logger, httpClient) { }
+    public override Task<Result<IReadOnlyList<StoreRawProduct>>> FetchProductsAsync(string? category = null, CancellationToken cancellationToken = default)
+        => SearchProductsAsync("cep telefonu", cancellationToken);
+}
+
+public class VivoStoreAdapter : BaseStoreAdapter
+{
+    public override string StoreSlug => "vivostore";
+    public override string StoreName => "Vivo";
+    public VivoStoreAdapter(ILogger<VivoStoreAdapter> logger, HttpClient httpClient) : base(logger, httpClient) { }
+    public override Task<Result<IReadOnlyList<StoreRawProduct>>> FetchProductsAsync(string? category = null, CancellationToken cancellationToken = default)
+        => SearchProductsAsync("cep telefonu", cancellationToken);
+}
+
+public class EvkurAdapter : BaseStoreAdapter
+{
+    public override string StoreSlug => "evkur";
+    public override string StoreName => "Evkur";
+    public EvkurAdapter(ILogger<EvkurAdapter> logger, HttpClient httpClient) : base(logger, httpClient) { }
+    public override Task<Result<IReadOnlyList<StoreRawProduct>>> FetchProductsAsync(string? category = null, CancellationToken cancellationToken = default)
+        => SearchProductsAsync("cep telefonu", cancellationToken);
+}
+
+public class YonAvmAdapter : BaseStoreAdapter
+{
+    public override string StoreSlug => "yonavm";
+    public override string StoreName => "Yön AVM";
+    public YonAvmAdapter(ILogger<YonAvmAdapter> logger, HttpClient httpClient) : base(logger, httpClient) { }
+    public override Task<Result<IReadOnlyList<StoreRawProduct>>> FetchProductsAsync(string? category = null, CancellationToken cancellationToken = default)
+        => SearchProductsAsync("cep telefonu", cancellationToken);
+}
+
+public class MutluEvimAdapter : BaseStoreAdapter
+{
+    public override string StoreSlug => "mutluevim";
+    public override string StoreName => "Mutlu Evim";
+    public MutluEvimAdapter(ILogger<MutluEvimAdapter> logger, HttpClient httpClient) : base(logger, httpClient) { }
+    public override Task<Result<IReadOnlyList<StoreRawProduct>>> FetchProductsAsync(string? category = null, CancellationToken cancellationToken = default)
+        => SearchProductsAsync("cep telefonu", cancellationToken);
+}
+
+public class ArcelikAdapter : BaseStoreAdapter
+{
+    public override string StoreSlug => "arcelik";
+    public override string StoreName => "Arçelik";
+    public ArcelikAdapter(ILogger<ArcelikAdapter> logger, HttpClient httpClient) : base(logger, httpClient) { }
+    public override Task<Result<IReadOnlyList<StoreRawProduct>>> FetchProductsAsync(string? category = null, CancellationToken cancellationToken = default)
+        => SearchProductsAsync("cep telefonu", cancellationToken);
+}
+
+public class BekoAdapter : BaseStoreAdapter
+{
+    public override string StoreSlug => "beko";
+    public override string StoreName => "Beko";
+    public BekoAdapter(ILogger<BekoAdapter> logger, HttpClient httpClient) : base(logger, httpClient) { }
+    public override Task<Result<IReadOnlyList<StoreRawProduct>>> FetchProductsAsync(string? category = null, CancellationToken cancellationToken = default)
+        => SearchProductsAsync("cep telefonu", cancellationToken);
+}
+
+public class VestelAdapter : BaseStoreAdapter
+{
+    public override string StoreSlug => "vestel";
+    public override string StoreName => "Vestel";
+    public VestelAdapter(ILogger<VestelAdapter> logger, HttpClient httpClient) : base(logger, httpClient) { }
+    public override Task<Result<IReadOnlyList<StoreRawProduct>>> FetchProductsAsync(string? category = null, CancellationToken cancellationToken = default)
+        => SearchProductsAsync("cep telefonu", cancellationToken);
+}
+
+public class A101Adapter : BaseStoreAdapter
+{
+    public override string StoreSlug => "a101";
+    public override string StoreName => "A101";
+    public A101Adapter(ILogger<A101Adapter> logger, HttpClient httpClient) : base(logger, httpClient) { }
+    public override Task<Result<IReadOnlyList<StoreRawProduct>>> FetchProductsAsync(string? category = null, CancellationToken cancellationToken = default)
+        => SearchProductsAsync("cep telefonu", cancellationToken);
+}
+
+public class BimAdapter : BaseStoreAdapter
+{
+    public override string StoreSlug => "bim";
+    public override string StoreName => "BİM";
+    public BimAdapter(ILogger<BimAdapter> logger, HttpClient httpClient) : base(logger, httpClient) { }
+    public override Task<Result<IReadOnlyList<StoreRawProduct>>> FetchProductsAsync(string? category = null, CancellationToken cancellationToken = default)
+        => SearchProductsAsync("cep telefonu", cancellationToken);
+}
+
+public class SokAdapter : BaseStoreAdapter
+{
+    public override string StoreSlug => "sok";
+    public override string StoreName => "ŞOK";
+    public SokAdapter(ILogger<SokAdapter> logger, HttpClient httpClient) : base(logger, httpClient) { }
     public override Task<Result<IReadOnlyList<StoreRawProduct>>> FetchProductsAsync(string? category = null, CancellationToken cancellationToken = default)
         => SearchProductsAsync("cep telefonu", cancellationToken);
 }

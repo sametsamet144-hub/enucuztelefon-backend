@@ -156,7 +156,7 @@ public class ApiIntegrationTests : IClassFixture<CustomWebApplicationFactory>
         stats.Should().NotBeNull();
         stats!.TotalPhones.Should().Be(97);
         stats.TotalBrands.Should().BeGreaterThanOrEqualTo(30);
-        stats.TotalStores.Should().Be(20);
+        stats.TotalStores.Should().Be(29);
         stats.TotalOffers.Should().BeGreaterThanOrEqualTo(1500);
     }
 

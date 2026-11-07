@@ -9,6 +9,14 @@ namespace EnUcuzTelefon.Infrastructure.Adapters;
 
 public static class MarketAggregator
 {
+    public static readonly HashSet<string> AllowedStoreSlugs = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "hepsiburada", "trendyol", "amazon", "n11", "pttavm", "ciceksepeti", "mediamarkt", "teknosa", "vatan",
+        "turkcell", "vodafone", "turk-telekom", "applestore", "samsungstore", "mistore", "huaweistore",
+        "honorstore", "tecnostore", "infinixstore", "vivostore", "evkur", "yonavm", "mutluevim",
+        "arcelik", "beko", "vestel", "a101", "bim", "sok"
+    };
+
     private static readonly ConcurrentDictionary<string, (DateTime CachedAt, IReadOnlyList<AggregatedMarketOffer> Offers)> Cache =
         new(StringComparer.OrdinalIgnoreCase);
 
@@ -174,6 +182,11 @@ public static class MarketAggregator
         string query,
         CancellationToken cancellationToken = default)
     {
+        if (!AllowedStoreSlugs.Contains(storeSlug))
+        {
+            return Array.Empty<StoreRawProduct>();
+        }
+
         var cleanQuery = query.Trim();
         var allOffers = await FetchMarketOffersForQueryAsync(cleanQuery, cancellationToken);
 
@@ -259,34 +272,29 @@ public static class MarketAggregator
 
         var cleanModelQuery = StripStorageSuffix(query);
 
-        // 2. Live Pazarama Direct Scrape (fast, unblocked, direct -p- URLs)
-        try
-        {
-            var pazOffers = await ScrapePazaramaLiveAsync(cleanModelQuery, cancellationToken);
-            foreach (var po in pazOffers)
-            {
-                offersByStore["pazarama"] = po;
-            }
-        }
-        catch { /* graceful fallback */ }
-
-        // 3. Live MediaMarkt Direct Scrape (fast, unblocked JSON-LD ItemList with direct .html URLs)
+        // 2. Live MediaMarkt Direct Scrape (fast, unblocked JSON-LD ItemList with direct .html URLs)
         try
         {
             var mmOffers = await ScrapeMediaMarktLiveAsync(cleanModelQuery, cancellationToken);
             foreach (var mo in mmOffers)
             {
-                offersByStore["mediamarkt"] = mo;
+                if (AllowedStoreSlugs.Contains(mo.StoreSlug))
+                {
+                    offersByStore["mediamarkt"] = mo;
+                }
             }
         }
         catch { /* graceful fallback */ }
 
-        // 4. Live Akakçe Multi-Store Scrape (with rate-limiting semaphore so bursts never get blocked)
+        // 3. Live Akakçe Multi-Store Scrape (with rate-limiting semaphore so bursts never get blocked)
         try
         {
             var akakceOffers = await ScrapeAkakceLiveAsync(query, seedEntry?.Slug, cancellationToken);
             foreach (var ao in akakceOffers)
             {
+                if (!AllowedStoreSlugs.Contains(ao.StoreSlug))
+                    continue;
+
                 if (!offersByStore.TryGetValue(ao.StoreSlug, out var existing) ||
                     ao.IsDirectProductUrl ||
                     !existing.IsDirectProductUrl)
@@ -308,7 +316,7 @@ public static class MarketAggregator
         catch { /* graceful fallback */ }
 
         var results = offersByStore.Values
-            .Where(o => o.Price >= 1500)
+            .Where(o => AllowedStoreSlugs.Contains(o.StoreSlug) && o.Price >= 1500)
             .OrderBy(o => o.Price)
             .ThenByDescending(o => o.IsDirectProductUrl)
             .ToList();
@@ -319,41 +327,6 @@ public static class MarketAggregator
         }
 
         return results;
-    }
-
-    public static async Task<IReadOnlyList<AggregatedMarketOffer>> ScrapePazaramaLiveAsync(string query, CancellationToken cancellationToken)
-    {
-        var list = new List<AggregatedMarketOffer>();
-        var url = $"https://www.pazarama.com/arama?q={Uri.EscapeDataString(query)}";
-        using var req = new HttpRequestMessage(HttpMethod.Get, url);
-        using var resp = await HttpClient.SendAsync(req, cancellationToken);
-        if (!resp.IsSuccessStatusCode) return list;
-
-        var html = await resp.Content.ReadAsStringAsync(cancellationToken);
-        var cards = html.Split("data-testid=\"listing-product-card-grid\"", StringSplitOptions.RemoveEmptyEntries);
-
-        foreach (var card in cards.Skip(1).Take(10))
-        {
-            var uMatch = Regex.Match(card, @"<a\s+href=""(?<url>/[^""]+-p-\d+)""\s+title=""(?<title>[^""]+)""");
-            var priceMatches = Regex.Matches(card, @"(?<price>\d{1,3}\.\d{3},\d{2})\s*TL");
-            if (uMatch.Success && priceMatches.Count > 0)
-            {
-                var rawTitle = WebUtility.HtmlDecode(uMatch.Groups["title"].Value).Trim();
-                var rawUrlPath = uMatch.Groups["url"].Value.Trim();
-                if (!IsModelMatch(query, rawTitle, rawUrlPath))
-                    continue;
-
-                var lastPriceStr = priceMatches[^1].Groups["price"].Value.Replace(".", "").Replace(",", ".");
-                if (decimal.TryParse(lastPriceStr, NumberStyles.Any, CultureInfo.InvariantCulture, out var price) && price >= 3000)
-                {
-                    var fullUrl = $"https://www.pazarama.com{rawUrlPath}";
-                    list.Add(new AggregatedMarketOffer("pazarama", "Pazarama", "Pazarama Yetkili Satıcı", Math.Round(price, 2), fullUrl, true));
-                    break;
-                }
-            }
-        }
-
-        return list;
     }
 
     public static async Task<IReadOnlyList<AggregatedMarketOffer>> ScrapeMediaMarktLiveAsync(string query, CancellationToken cancellationToken)
@@ -577,25 +550,35 @@ public static class MarketAggregator
     public static string MapStoreSlug(string sellerName, string url)
     {
         var combined = (sellerName + " " + url).ToLowerInvariant();
-        if (combined.Contains("trendyol")) return "trendyol";
         if (combined.Contains("hepsiburada")) return "hepsiburada";
+        if (combined.Contains("trendyol")) return "trendyol";
         if (combined.Contains("amazon")) return "amazon";
         if (combined.Contains("n11")) return "n11";
-        if (combined.Contains("teknosa")) return "teknosa";
-        if (combined.Contains("mediamarkt")) return "mediamarkt";
-        if (combined.Contains("vatan")) return "vatan";
-        if (combined.Contains("pazarama")) return "pazarama";
         if (combined.Contains("pttavm") || combined.Contains("ptt")) return "pttavm";
+        if (combined.Contains("ciceksepeti") || combined.Contains("çiçeksepeti")) return "ciceksepeti";
+        if (combined.Contains("mediamarkt")) return "mediamarkt";
+        if (combined.Contains("teknosa")) return "teknosa";
+        if (combined.Contains("vatan")) return "vatan";
         if (combined.Contains("turkcell") || combined.Contains("pasaj")) return "turkcell";
         if (combined.Contains("vodafone")) return "vodafone";
         if (combined.Contains("telekom")) return "turk-telekom";
-        if (combined.Contains("itopya")) return "itopya";
-        if (combined.Contains("sinerji")) return "sinerji";
-        if (combined.Contains("incehesap")) return "incehesap";
-        if (combined.Contains("ciceksepeti") || combined.Contains("çiçeksepeti")) return "ciceksepeti";
         if (combined.Contains("apple.com") || combined.Contains("applestore")) return "applestore";
         if (combined.Contains("samsung.com") || combined.Contains("samsungstore")) return "samsungstore";
         if (combined.Contains("mistore") || combined.Contains("mi.com")) return "mistore";
+        if (combined.Contains("huawei")) return "huaweistore";
+        if (combined.Contains("honor")) return "honorstore";
+        if (combined.Contains("tecno")) return "tecnostore";
+        if (combined.Contains("infinix")) return "infinixstore";
+        if (combined.Contains("vivo") || combined.Contains("myepoint")) return "vivostore";
+        if (combined.Contains("evkur")) return "evkur";
+        if (combined.Contains("yonavm") || combined.Contains("yön avm")) return "yonavm";
+        if (combined.Contains("mutluevim") || combined.Contains("mutlu evim")) return "mutluevim";
+        if (combined.Contains("arcelik") || combined.Contains("arçelik")) return "arcelik";
+        if (combined.Contains("beko")) return "beko";
+        if (combined.Contains("vestel")) return "vestel";
+        if (combined.Contains("a101")) return "a101";
+        if (combined.Contains("bim") || combined.Contains("bım")) return "bim";
+        if (combined.Contains("sok") || combined.Contains("şok")) return "sok";
         return "";
     }
 
@@ -603,26 +586,36 @@ public static class MarketAggregator
     {
         return slug.ToLowerInvariant() switch
         {
-            "trendyol" => "Trendyol",
             "hepsiburada" => "Hepsiburada",
+            "trendyol" => "Trendyol",
             "amazon" => "Amazon Türkiye",
             "n11" => "n11",
-            "teknosa" => "Teknosa",
-            "mediamarkt" => "MediaMarkt",
-            "vatan" => "Vatan Bilgisayar",
-            "pazarama" => "Pazarama",
             "pttavm" => "PttAVM",
-            "turkcell" => "Turkcell Pasaj",
-            "vodafone" => "Vodafone Yanımda",
+            "ciceksepeti" => "Çiçeksepeti",
+            "mediamarkt" => "MediaMarkt",
+            "teknosa" => "Teknosa",
+            "vatan" => "Vatan Bilgisayar",
+            "turkcell" => "Turkcell (Turkcell Pasaj)",
+            "vodafone" => "Vodafone (Her Şey Yanımda)",
             "turk-telekom" => "Türk Telekom",
-            "itopya" => "İtopya",
-            "sinerji" => "Sinerji",
-            "incehesap" => "İncehesap",
-            "ciceksepeti" => "ÇiçekSepeti",
-            "applestore" => "Apple Store TR",
-            "samsungstore" => "Samsung Store TR",
-            "mistore" => "Mi Store TR",
-            _ => "Resmî Mağaza"
+            "applestore" => "Apple Store",
+            "samsungstore" => "Samsung Store",
+            "mistore" => "Mi Store (Xiaomi)",
+            "huaweistore" => "Huawei Store",
+            "honorstore" => "Honor",
+            "tecnostore" => "Tecno",
+            "infinixstore" => "Infinix",
+            "vivostore" => "Vivo",
+            "evkur" => "Evkur",
+            "yonavm" => "Yön AVM",
+            "mutluevim" => "Mutlu Evim",
+            "arcelik" => "Arçelik",
+            "beko" => "Beko",
+            "vestel" => "Vestel",
+            "a101" => "A101",
+            "bim" => "BİM",
+            "sok" => "ŞOK",
+            _ => slug
         };
     }
 
@@ -776,7 +769,7 @@ public static class MarketAggregator
                         var p = sp.TryGetProperty("price", out var pEl) && pEl.ValueKind == JsonValueKind.Number ? pEl.GetDecimal() : 0m;
                         var u = sp.TryGetProperty("url", out var uEl) ? uEl.GetString() ?? "" : "";
 
-                        if (!string.IsNullOrWhiteSpace(stSlug) && p > 0 && !string.IsNullOrWhiteSpace(u))
+                        if (!string.IsNullOrWhiteSpace(stSlug) && AllowedStoreSlugs.Contains(stSlug) && p > 0 && !string.IsNullOrWhiteSpace(u))
                         {
                             var isDirect = IsDirectProductUrl(u);
                             // Include direct product URLs or top 3 cheapest seed offers

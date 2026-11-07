@@ -75,27 +75,36 @@ public static class DependencyInjection
         // 4. HTTP Client for Adapters
         services.AddHttpClient();
 
-        // 5. Store Adapters
-        services.AddScoped<IStoreAdapter, TrendyolAdapter>();
+        // 5. Store Adapters (Strict 29 Whitelisted Turkish Stores)
         services.AddScoped<IStoreAdapter, HepsiburadaAdapter>();
+        services.AddScoped<IStoreAdapter, TrendyolAdapter>();
         services.AddScoped<IStoreAdapter, AmazonTurkeyAdapter>();
-        services.AddScoped<IStoreAdapter, TeknosaAdapter>();
-        services.AddScoped<IStoreAdapter, MediaMarktAdapter>();
-        services.AddScoped<IStoreAdapter, VatanAdapter>();
         services.AddScoped<IStoreAdapter, N11Adapter>();
-        services.AddScoped<IStoreAdapter, PazaramaAdapter>();
         services.AddScoped<IStoreAdapter, PttAvmAdapter>();
+        services.AddScoped<IStoreAdapter, CicekSepetiAdapter>();
+        services.AddScoped<IStoreAdapter, MediaMarktAdapter>();
+        services.AddScoped<IStoreAdapter, TeknosaAdapter>();
+        services.AddScoped<IStoreAdapter, VatanAdapter>();
         services.AddScoped<IStoreAdapter, TurkcellPasajAdapter>();
         services.AddScoped<IStoreAdapter, VodafoneAdapter>();
         services.AddScoped<IStoreAdapter, TurkTelekomAdapter>();
-        services.AddScoped<IStoreAdapter, ItopyaAdapter>();
-        services.AddScoped<IStoreAdapter, SinerjiAdapter>();
-        services.AddScoped<IStoreAdapter, IncehesapAdapter>();
-        services.AddScoped<IStoreAdapter, CicekSepetiAdapter>();
         services.AddScoped<IStoreAdapter, AppleStoreAdapter>();
         services.AddScoped<IStoreAdapter, SamsungStoreAdapter>();
         services.AddScoped<IStoreAdapter, XiaomiStoreAdapter>();
-        services.AddScoped<IStoreAdapter, OfficialStoreAdapter>();
+        services.AddScoped<IStoreAdapter, HuaweiStoreAdapter>();
+        services.AddScoped<IStoreAdapter, HonorStoreAdapter>();
+        services.AddScoped<IStoreAdapter, TecnoStoreAdapter>();
+        services.AddScoped<IStoreAdapter, InfinixStoreAdapter>();
+        services.AddScoped<IStoreAdapter, VivoStoreAdapter>();
+        services.AddScoped<IStoreAdapter, EvkurAdapter>();
+        services.AddScoped<IStoreAdapter, YonAvmAdapter>();
+        services.AddScoped<IStoreAdapter, MutluEvimAdapter>();
+        services.AddScoped<IStoreAdapter, ArcelikAdapter>();
+        services.AddScoped<IStoreAdapter, BekoAdapter>();
+        services.AddScoped<IStoreAdapter, VestelAdapter>();
+        services.AddScoped<IStoreAdapter, A101Adapter>();
+        services.AddScoped<IStoreAdapter, BimAdapter>();
+        services.AddScoped<IStoreAdapter, SokAdapter>();
 
         services.AddScoped<IStoreAdapterFactory, StoreAdapterFactory>();
 
