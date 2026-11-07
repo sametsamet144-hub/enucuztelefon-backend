@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: enucuztelefon-backend
+    env: docker
+    plan: free
+    dockerfilePath: Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
