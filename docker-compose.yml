@@ -1,0 +1,124 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: enucuztelefon_postgres
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-enucuztelefon}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: enucuztelefon_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: enucuztelefon_rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RabbitMQ__UserName:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RabbitMQ__Password:-guest}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmqdata:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile.api
+    container_name: enucuztelefon_api
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__DefaultConnection: ${ConnectionStrings__DefaultConnection:-Host=postgres;Port=5432;Database=${POSTGRES_DB:-enucuztelefon};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres}}
+      ConnectionStrings__Redis: ${ConnectionStrings__Redis:-redis:6379,abortConnect=false}
+      RabbitMQ__HostName: ${RabbitMQ__HostName:-rabbitmq}
+      RabbitMQ__UserName: ${RabbitMQ__UserName:-guest}
+      RabbitMQ__Password: ${RabbitMQ__Password:-guest}
+      Jwt__SecretKey: ${Jwt__SecretKey:-EnUcuzTelefonSuperSecretKey2026!MustBe32CharsLongAtLeast}
+    ports:
+      - "5000:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile.worker
+    container_name: enucuztelefon_worker
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__DefaultConnection: ${ConnectionStrings__DefaultConnection:-Host=postgres;Port=5432;Database=${POSTGRES_DB:-enucuztelefon};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres}}
+      ConnectionStrings__Redis: ${ConnectionStrings__Redis:-redis:6379,abortConnect=false}
+      RabbitMQ__HostName: ${RabbitMQ__HostName:-rabbitmq}
+      RabbitMQ__UserName: ${RabbitMQ__UserName:-guest}
+      RabbitMQ__Password: ${RabbitMQ__Password:-guest}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile.scheduler
+    container_name: enucuztelefon_scheduler
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__DefaultConnection: ${ConnectionStrings__DefaultConnection:-Host=postgres;Port=5432;Database=${POSTGRES_DB:-enucuztelefon};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres}}
+      RabbitMQ__HostName: ${RabbitMQ__HostName:-rabbitmq}
+      RabbitMQ__UserName: ${RabbitMQ__UserName:-guest}
+      RabbitMQ__Password: ${RabbitMQ__Password:-guest}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  redisdata:
+  rabbitmqdata:

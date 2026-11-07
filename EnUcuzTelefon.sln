@@ -1,0 +1,92 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{981AA2AD-20E4-420D-890F-A93207925AB3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EnUcuzTelefon.Domain", "src\EnUcuzTelefon.Domain\EnUcuzTelefon.Domain.csproj", "{33EDD735-7120-443C-9895-F6260BE860FE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EnUcuzTelefon.Shared", "src\EnUcuzTelefon.Shared\EnUcuzTelefon.Shared.csproj", "{FB5F5C1E-DCFE-4B20-982B-3D14608EA442}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EnUcuzTelefon.Application", "src\EnUcuzTelefon.Application\EnUcuzTelefon.Application.csproj", "{9754095C-07F5-4418-B603-A12807A76069}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EnUcuzTelefon.Infrastructure", "src\EnUcuzTelefon.Infrastructure\EnUcuzTelefon.Infrastructure.csproj", "{3732C378-97A0-432A-A900-A506620CD87C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EnUcuzTelefon.Api", "src\EnUcuzTelefon.Api\EnUcuzTelefon.Api.csproj", "{F13D0C92-CB99-4E41-B36B-35592A021036}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EnUcuzTelefon.Worker", "src\EnUcuzTelefon.Worker\EnUcuzTelefon.Worker.csproj", "{C2C848C6-FA9D-461A-9E94-3D02A7C0F89C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EnUcuzTelefon.Scheduler", "src\EnUcuzTelefon.Scheduler\EnUcuzTelefon.Scheduler.csproj", "{A440CD9B-1827-45DF-AFBF-3F044B33F85C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{EC2A8362-6CCE-48E2-9E1E-CE180E402A7C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EnUcuzTelefon.UnitTests", "tests\EnUcuzTelefon.UnitTests\EnUcuzTelefon.UnitTests.csproj", "{B782DFAE-7AFB-4A43-A9D4-6941F9CD4109}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EnUcuzTelefon.IntegrationTests", "tests\EnUcuzTelefon.IntegrationTests\EnUcuzTelefon.IntegrationTests.csproj", "{BC6416CC-0E6F-4DCE-A084-A24089C18F77}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EnUcuzTelefon.ArchitectureTests", "tests\EnUcuzTelefon.ArchitectureTests\EnUcuzTelefon.ArchitectureTests.csproj", "{83FC038B-311D-47D0-8FFD-39732D087574}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{33EDD735-7120-443C-9895-F6260BE860FE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{33EDD735-7120-443C-9895-F6260BE860FE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{33EDD735-7120-443C-9895-F6260BE860FE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{33EDD735-7120-443C-9895-F6260BE860FE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FB5F5C1E-DCFE-4B20-982B-3D14608EA442}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FB5F5C1E-DCFE-4B20-982B-3D14608EA442}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FB5F5C1E-DCFE-4B20-982B-3D14608EA442}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FB5F5C1E-DCFE-4B20-982B-3D14608EA442}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9754095C-07F5-4418-B603-A12807A76069}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9754095C-07F5-4418-B603-A12807A76069}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9754095C-07F5-4418-B603-A12807A76069}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9754095C-07F5-4418-B603-A12807A76069}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3732C378-97A0-432A-A900-A506620CD87C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3732C378-97A0-432A-A900-A506620CD87C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3732C378-97A0-432A-A900-A506620CD87C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3732C378-97A0-432A-A900-A506620CD87C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F13D0C92-CB99-4E41-B36B-35592A021036}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F13D0C92-CB99-4E41-B36B-35592A021036}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F13D0C92-CB99-4E41-B36B-35592A021036}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F13D0C92-CB99-4E41-B36B-35592A021036}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C2C848C6-FA9D-461A-9E94-3D02A7C0F89C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C2C848C6-FA9D-461A-9E94-3D02A7C0F89C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C2C848C6-FA9D-461A-9E94-3D02A7C0F89C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C2C848C6-FA9D-461A-9E94-3D02A7C0F89C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A440CD9B-1827-45DF-AFBF-3F044B33F85C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A440CD9B-1827-45DF-AFBF-3F044B33F85C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A440CD9B-1827-45DF-AFBF-3F044B33F85C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A440CD9B-1827-45DF-AFBF-3F044B33F85C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B782DFAE-7AFB-4A43-A9D4-6941F9CD4109}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B782DFAE-7AFB-4A43-A9D4-6941F9CD4109}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B782DFAE-7AFB-4A43-A9D4-6941F9CD4109}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B782DFAE-7AFB-4A43-A9D4-6941F9CD4109}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BC6416CC-0E6F-4DCE-A084-A24089C18F77}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BC6416CC-0E6F-4DCE-A084-A24089C18F77}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BC6416CC-0E6F-4DCE-A084-A24089C18F77}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BC6416CC-0E6F-4DCE-A084-A24089C18F77}.Release|Any CPU.Build.0 = Release|Any CPU
+		{83FC038B-311D-47D0-8FFD-39732D087574}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{83FC038B-311D-47D0-8FFD-39732D087574}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{83FC038B-311D-47D0-8FFD-39732D087574}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{83FC038B-311D-47D0-8FFD-39732D087574}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{33EDD735-7120-443C-9895-F6260BE860FE} = {981AA2AD-20E4-420D-890F-A93207925AB3}
+		{FB5F5C1E-DCFE-4B20-982B-3D14608EA442} = {981AA2AD-20E4-420D-890F-A93207925AB3}
+		{9754095C-07F5-4418-B603-A12807A76069} = {981AA2AD-20E4-420D-890F-A93207925AB3}
+		{3732C378-97A0-432A-A900-A506620CD87C} = {981AA2AD-20E4-420D-890F-A93207925AB3}
+		{F13D0C92-CB99-4E41-B36B-35592A021036} = {981AA2AD-20E4-420D-890F-A93207925AB3}
+		{C2C848C6-FA9D-461A-9E94-3D02A7C0F89C} = {981AA2AD-20E4-420D-890F-A93207925AB3}
+		{A440CD9B-1827-45DF-AFBF-3F044B33F85C} = {981AA2AD-20E4-420D-890F-A93207925AB3}
+		{B782DFAE-7AFB-4A43-A9D4-6941F9CD4109} = {EC2A8362-6CCE-48E2-9E1E-CE180E402A7C}
+		{BC6416CC-0E6F-4DCE-A084-A24089C18F77} = {EC2A8362-6CCE-48E2-9E1E-CE180E402A7C}
+		{83FC038B-311D-47D0-8FFD-39732D087574} = {EC2A8362-6CCE-48E2-9E1E-CE180E402A7C}
+	EndGlobalSection
+EndGlobal

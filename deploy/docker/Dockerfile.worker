@@ -1,0 +1,27 @@
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /app
+
+COPY EnUcuzTelefon.sln .
+COPY nuget.config .
+COPY Directory.Build.props .
+COPY src/EnUcuzTelefon.Domain/*.csproj src/EnUcuzTelefon.Domain/
+COPY src/EnUcuzTelefon.Shared/*.csproj src/EnUcuzTelefon.Shared/
+COPY src/EnUcuzTelefon.Application/*.csproj src/EnUcuzTelefon.Application/
+COPY src/EnUcuzTelefon.Infrastructure/*.csproj src/EnUcuzTelefon.Infrastructure/
+COPY src/EnUcuzTelefon.Worker/*.csproj src/EnUcuzTelefon.Worker/
+
+RUN dotnet restore src/EnUcuzTelefon.Worker/EnUcuzTelefon.Worker.csproj
+
+COPY src/EnUcuzTelefon.Domain/ src/EnUcuzTelefon.Domain/
+COPY src/EnUcuzTelefon.Shared/ src/EnUcuzTelefon.Shared/
+COPY src/EnUcuzTelefon.Application/ src/EnUcuzTelefon.Application/
+COPY src/EnUcuzTelefon.Infrastructure/ src/EnUcuzTelefon.Infrastructure/
+COPY src/EnUcuzTelefon.Worker/ src/EnUcuzTelefon.Worker/
+
+RUN dotnet publish src/EnUcuzTelefon.Worker/EnUcuzTelefon.Worker.csproj -c Release -o /out
+
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
+WORKDIR /app
+COPY --from=build /out .
+
+ENTRYPOINT ["dotnet", "EnUcuzTelefon.Worker.dll"]
