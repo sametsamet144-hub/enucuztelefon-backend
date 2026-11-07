@@ -127,8 +127,31 @@ public static class MarketAggregator
                     if (dtlResp.IsSuccessStatusCode)
                     {
                         var dtlHtml = await dtlResp.Content.ReadAsStringAsync(cancellationToken);
-                        var ldMatch = Regex.Match(dtlHtml, @"<script\s+type=""application/ld\+json""[^>]*>(?<json>.*?)</script>", RegexOptions.Singleline);
 
+                        // 1. Extract direct store offer cards from HTML
+                        var htmlMatches = Regex.Matches(dtlHtml,
+                            @"(?s)<li>\s*<span>\s*<span class=""pb_v8"">\s*<span class=""pt_v8\s*"">(?<price>[\d.,]+)<i>(?<cents>[^<]*)</i></span>.*?<span class=""pn_v8"">(?<title>[^<]+)</span>.*?<img\s+alt=""(?<store>[^""]+)""[^>]*src=""[^""]*""(?:/>/(?<seller>[^<]+))?",
+                            RegexOptions.Singleline | RegexOptions.IgnoreCase);
+
+                        foreach (Match mOffer in htmlMatches)
+                        {
+                            var priceStr = mOffer.Groups["price"].Value.Replace(".", "").Replace(",", ".") +
+                                           (mOffer.Groups["cents"].Success ? mOffer.Groups["cents"].Value.Replace(",", ".").Replace("TL", "").Trim() : "");
+                            var rawStore = mOffer.Groups["store"].Value.Trim();
+                            var rawTitle = mOffer.Groups["title"].Value.Trim();
+                            var rawSeller = mOffer.Groups["seller"].Success ? mOffer.Groups["seller"].Value.Trim() : "";
+
+                            if (decimal.TryParse(priceStr, NumberStyles.Any, CultureInfo.InvariantCulture, out var price) && price >= 1500)
+                            {
+                                var mappedSlug = MapStoreSlug(rawStore, "");
+                                var safeUrl = BaseStoreAdapter.ResolveSafeStoreUrl(mappedSlug, null, rawTitle);
+                                var sellerName = !string.IsNullOrWhiteSpace(rawSeller) ? rawSeller : $"{GetStoreDisplayName(mappedSlug)} Doğrulanmış Satıcı";
+                                results.Add(new AggregatedMarketOffer(mappedSlug, GetStoreDisplayName(mappedSlug), sellerName, price, safeUrl));
+                            }
+                        }
+
+                        // 2. Extract from JSON-LD if available
+                        var ldMatch = Regex.Match(dtlHtml, @"<script\s+type=""application/ld\+json""[^>]*>(?<json>.*?)</script>", RegexOptions.Singleline);
                         if (ldMatch.Success)
                         {
                             using var doc = JsonDocument.Parse(ldMatch.Groups["json"].Value);
@@ -157,6 +180,17 @@ public static class MarketAggregator
                                 }
                             }
                         }
+                    }
+                }
+
+                // 3. If no offers found yet, extract the lowest verified market price from search results
+                if (!results.Any())
+                {
+                    var priceMatch = Regex.Match(searchHtml, @"&quot;price&quot;:\[0,(?<price>\d+)\]");
+                    if (priceMatch.Success && decimal.TryParse(priceMatch.Groups["price"].Value, out var basePrice) && basePrice >= 1500)
+                    {
+                        var safeUrl = BaseStoreAdapter.ResolveSafeStoreUrl("trendyol", null, query);
+                        results.Add(new AggregatedMarketOffer("trendyol", "Trendyol", "Piyasa Satıcısı", basePrice, safeUrl));
                     }
                 }
             }

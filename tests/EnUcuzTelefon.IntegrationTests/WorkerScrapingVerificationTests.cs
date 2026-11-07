@@ -61,7 +61,7 @@ public class WorkerScrapingVerificationTests : IClassFixture<CustomWebApplicatio
                 var store = stores.FirstOrDefault(s => s.Slug == adapter.StoreSlug)
                             ?? stores.First();
 
-                var searchQuery = $"{product.Brand?.Name ?? ""} {product.Name} {variant!.StorageGb}GB".Trim();
+                var searchQuery = BaseStoreAdapter.BuildProductSearchQuery(product.Brand?.Name, product.Name, variant!.StorageGb);
                 var searchResult = await adapter.SearchProductsAsync(searchQuery, CancellationToken.None);
 
                 searchResult.IsSuccess.Should().BeTrue();

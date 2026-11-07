@@ -32,6 +32,16 @@ public class TrendyolAdapter : BaseStoreAdapter
             req.Headers.Add("sec-ch-ua-platform", "\"Windows\"");
 
             using var response = await HttpClient.SendAsync(req, cancellationToken);
+            if (response.StatusCode == System.Net.HttpStatusCode.Forbidden ||
+                response.StatusCode == (System.Net.HttpStatusCode)429 ||
+                response.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable)
+            {
+                TripDirectAccessCooldown(StoreSlug, TimeSpan.FromMinutes(30));
+                Logger.LogWarning("🛡️ Store '{StoreSlug}' returned HTTP {StatusCode} (anti-bot protection). Tripping circuit breaker for 30m; routing queries to aggregator.",
+                    StoreSlug, (int)response.StatusCode);
+                return Result.Success<IReadOnlyList<StoreRawProduct>>(results);
+            }
+
             if (response.IsSuccessStatusCode)
             {
                 var html = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -111,6 +121,16 @@ public class HepsiburadaAdapter : BaseStoreAdapter
             req.Headers.Add("sec-ch-ua", "\"Chromium\";v=\"124\", \"Google Chrome\";v=\"124\", \"Not-A.Brand\";v=\"99\"");
 
             using var response = await HttpClient.SendAsync(req, cancellationToken);
+            if (response.StatusCode == System.Net.HttpStatusCode.Forbidden ||
+                response.StatusCode == (System.Net.HttpStatusCode)429 ||
+                response.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable)
+            {
+                TripDirectAccessCooldown(StoreSlug, TimeSpan.FromMinutes(30));
+                Logger.LogWarning("🛡️ Store '{StoreSlug}' returned HTTP {StatusCode} (anti-bot protection). Tripping circuit breaker for 30m; routing queries to aggregator.",
+                    StoreSlug, (int)response.StatusCode);
+                return Result.Success<IReadOnlyList<StoreRawProduct>>(results);
+            }
+
             if (response.IsSuccessStatusCode)
             {
                 var html = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -226,6 +246,16 @@ public class VatanAdapter : BaseStoreAdapter
             req.Headers.Add("Accept-Language", "tr-TR,tr;q=0.9,en-US;q=0.8");
 
             using var response = await HttpClient.SendAsync(req, cancellationToken);
+            if (response.StatusCode == System.Net.HttpStatusCode.Forbidden ||
+                response.StatusCode == (System.Net.HttpStatusCode)429 ||
+                response.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable)
+            {
+                TripDirectAccessCooldown(StoreSlug, TimeSpan.FromMinutes(30));
+                Logger.LogWarning("🛡️ Store '{StoreSlug}' returned HTTP {StatusCode} (anti-bot protection). Tripping circuit breaker for 30m; routing queries to aggregator.",
+                    StoreSlug, (int)response.StatusCode);
+                return Result.Success<IReadOnlyList<StoreRawProduct>>(results);
+            }
+
             if (response.IsSuccessStatusCode)
             {
                 var html = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -292,6 +322,16 @@ public class N11Adapter : BaseStoreAdapter
             req.Headers.Add("Accept-Language", "tr-TR,tr;q=0.9,en-US;q=0.8");
 
             using var response = await HttpClient.SendAsync(req, cancellationToken);
+            if (response.StatusCode == System.Net.HttpStatusCode.Forbidden ||
+                response.StatusCode == (System.Net.HttpStatusCode)429 ||
+                response.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable)
+            {
+                TripDirectAccessCooldown(StoreSlug, TimeSpan.FromMinutes(30));
+                Logger.LogWarning("🛡️ Store '{StoreSlug}' returned HTTP {StatusCode} (anti-bot protection). Tripping circuit breaker for 30m; routing queries to aggregator.",
+                    StoreSlug, (int)response.StatusCode);
+                return Result.Success<IReadOnlyList<StoreRawProduct>>(results);
+            }
+
             if (response.IsSuccessStatusCode)
             {
                 var html = await response.Content.ReadAsStringAsync(cancellationToken);

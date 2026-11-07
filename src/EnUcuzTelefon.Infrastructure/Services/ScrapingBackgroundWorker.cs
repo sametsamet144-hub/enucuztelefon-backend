@@ -113,7 +113,7 @@ public class ScrapingBackgroundWorker : BackgroundService
                             {
                                 if (stoppingToken.IsCancellationRequested) break;
 
-                                var searchQuery = $"{product.Brand.Name} {product.Name} {variant.StorageGb}GB".Trim();
+                                var searchQuery = BaseStoreAdapter.BuildProductSearchQuery(product.Brand?.Name, product.Name, variant.StorageGb);
                                 var searchResult = await adapter.SearchProductsAsync(searchQuery, stoppingToken);
 
                                 if (searchResult.IsSuccess && searchResult.Value.Any())
@@ -192,7 +192,7 @@ public class ScrapingBackgroundWorker : BackgroundService
                                 }
 
                                 // Controlled rate limit between variant queries
-                                await Task.Delay(40, stoppingToken);
+                                await Task.Delay(100, stoppingToken);
                             }
 
                             // Periodically persist progress to DB every 5 products

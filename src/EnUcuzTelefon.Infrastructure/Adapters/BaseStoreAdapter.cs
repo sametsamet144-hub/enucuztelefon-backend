@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text.RegularExpressions;
 using EnUcuzTelefon.Application.Interfaces;
@@ -9,6 +10,8 @@ namespace EnUcuzTelefon.Infrastructure.Adapters;
 
 public abstract class BaseStoreAdapter : IStoreAdapter
 {
+    private static readonly ConcurrentDictionary<string, DateTime> DirectAccessCooloffs = new(StringComparer.OrdinalIgnoreCase);
+
     public abstract string StoreSlug { get; }
     public abstract string StoreName { get; }
     protected readonly ILogger Logger;
@@ -18,6 +21,38 @@ public abstract class BaseStoreAdapter : IStoreAdapter
     {
         Logger = logger;
         HttpClient = httpClient;
+    }
+
+    public static bool IsDirectAccessCoolingDown(string storeSlug)
+    {
+        if (DirectAccessCooloffs.TryGetValue(storeSlug, out var expiry))
+        {
+            if (DateTime.UtcNow < expiry)
+            {
+                return true;
+            }
+            DirectAccessCooloffs.TryRemove(storeSlug, out _);
+        }
+        return false;
+    }
+
+    public static void TripDirectAccessCooldown(string storeSlug, TimeSpan duration)
+    {
+        DirectAccessCooloffs[storeSlug] = DateTime.UtcNow.Add(duration);
+    }
+
+    public static string BuildProductSearchQuery(string? brandName, string productName, int? storageGb = null)
+    {
+        var brand = brandName?.Trim() ?? "";
+        var name = productName?.Trim() ?? "";
+
+        var cleanName = !string.IsNullOrWhiteSpace(brand) && name.StartsWith(brand, StringComparison.OrdinalIgnoreCase)
+            ? name
+            : $"{brand} {name}".Trim();
+
+        return storageGb.HasValue && storageGb > 0
+            ? $"{cleanName} {storageGb}GB".Trim()
+            : cleanName;
     }
 
     public virtual async Task<Result<StoreIntegrationStatus>> TestConnectionAsync(CancellationToken cancellationToken = default)
@@ -41,24 +76,27 @@ public abstract class BaseStoreAdapter : IStoreAdapter
 
     public virtual async Task<Result<IReadOnlyList<StoreRawProduct>>> SearchProductsAsync(string query, CancellationToken cancellationToken = default)
     {
-        try
+        if (!IsDirectAccessCoolingDown(StoreSlug))
         {
-            var directResults = await SearchDirectAsync(query, cancellationToken);
-            if (directResults.IsSuccess && directResults.Value.Any())
+            try
             {
-                var clean = directResults.Value
-                    .Where(r => r.Price >= 1500 && !IsAccessory(r.Title))
-                    .ToList();
-
-                if (clean.Any())
+                var directResults = await SearchDirectAsync(query, cancellationToken);
+                if (directResults.IsSuccess && directResults.Value.Any())
                 {
-                    return Result.Success<IReadOnlyList<StoreRawProduct>>(clean);
+                    var clean = directResults.Value
+                        .Where(r => r.Price >= 1500 && !IsAccessory(r.Title))
+                        .ToList();
+
+                    if (clean.Any())
+                    {
+                        return Result.Success<IReadOnlyList<StoreRawProduct>>(clean);
+                    }
                 }
             }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogDebug(ex, "Direct search for store {StoreSlug} threw, falling back to market aggregator", StoreSlug);
+            catch (Exception ex)
+            {
+                Logger.LogDebug(ex, "Direct search for store {StoreSlug} threw, falling back to market aggregator", StoreSlug);
+            }
         }
 
         try
