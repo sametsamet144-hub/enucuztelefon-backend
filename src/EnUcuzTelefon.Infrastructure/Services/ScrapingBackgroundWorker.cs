@@ -151,8 +151,8 @@ public class ScrapingBackgroundWorker : BackgroundService
                                         {
                                             var isExistingDirect = MarketAggregator.IsDirectProductUrl(existingOffer.Url);
 
-                                            // Never overwrite an existing direct product URL & price with a generic fallback search URL
-                                            if (isExistingDirect && !isIncomingDirect)
+                                            // Never overwrite an existing price with a generic fallback search URL
+                                            if (!isIncomingDirect && existingOffer.Price > 0)
                                             {
                                                 existingOffer.LastCheckedAt = DateTime.UtcNow;
                                                 existingOffer.IsVerified = true;
@@ -211,7 +211,8 @@ public class ScrapingBackgroundWorker : BackgroundService
 
                                 if (activeOffers.Any())
                                 {
-                                    var minOffer = activeOffers.First();
+                                    var directOffers = activeOffers.Where(o => MarketAggregator.IsDirectProductUrl(o.Url)).ToList();
+                                    var minOffer = directOffers.Any() ? directOffers.OrderBy(o => o.Price).First() : activeOffers.First();
                                     var maxOffer = activeOffers.Last();
 
                                     if (variant.LowestPrice > 0 && minOffer.Price < variant.LowestPrice)

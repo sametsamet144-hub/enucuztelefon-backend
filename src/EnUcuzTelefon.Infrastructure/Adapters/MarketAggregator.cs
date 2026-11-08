@@ -773,10 +773,7 @@ public static class MarketAggregator
                         {
                             var isDirect = IsDirectProductUrl(u);
                             // Include direct product URLs or top 3 cheapest seed offers
-                            if (isDirect || offers.Count < 3)
-                            {
-                                offers.Add(new AggregatedMarketOffer(stSlug, stName, seller, p, u, isDirect));
-                            }
+                            offers.Add(new AggregatedMarketOffer(stSlug, stName, seller, p, u, isDirect));
                         }
                     }
                 }
