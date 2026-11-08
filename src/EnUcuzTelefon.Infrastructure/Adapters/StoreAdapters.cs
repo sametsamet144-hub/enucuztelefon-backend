@@ -547,7 +547,7 @@ public class AppleStoreAdapter : BaseStoreAdapter
         }
 
         var (brand, model, ram, storage, color) = ParseTitle(query);
-        var directUrl = "https://www.apple.com/tr/iphone/";
+        var directUrl = EnUcuzTelefon.Shared.Utils.StoreUrlHelper.ResolveAppleStoreUrl(query);
         var basePrice = MarketAggregator.EstimateBasePrice(query);
         var officialPrice = Math.Round(basePrice * 1.055m, 0);
 
@@ -591,7 +591,7 @@ public class SamsungStoreAdapter : BaseStoreAdapter
         }
 
         var (brand, model, ram, storage, color) = ParseTitle(query);
-        var directUrl = "https://shop.samsung.com/tr/mobil/cep-telefonu/";
+        var directUrl = EnUcuzTelefon.Shared.Utils.StoreUrlHelper.ResolveSamsungStoreUrl(query);
         var basePrice = MarketAggregator.EstimateBasePrice(query);
         var officialPrice = Math.Round(basePrice * 1.045m, 0);
 
@@ -635,7 +635,7 @@ public class XiaomiStoreAdapter : BaseStoreAdapter
         }
 
         var (brand, model, ram, storage, color) = ParseTitle(query);
-        var directUrl = "https://www.mi.com/tr/phone/";
+        var directUrl = EnUcuzTelefon.Shared.Utils.StoreUrlHelper.ResolveMiStoreUrl(query);
         var basePrice = MarketAggregator.EstimateBasePrice(query);
         var officialPrice = Math.Round(basePrice * 1.040m, 0);
 

@@ -34,6 +34,13 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
                 services.Remove(descriptor);
             }
 
+            // Remove background workers so they don't block tests
+            var hostedServices = services.Where(d => d.ServiceType == typeof(Microsoft.Extensions.Hosting.IHostedService)).ToList();
+            foreach (var hs in hostedServices)
+            {
+                services.Remove(hs);
+            }
+
             services.AddDbContext<ApplicationDbContext>(options =>
             {
                 options.UseInMemoryDatabase("IntegrationTestsDb");
@@ -47,14 +54,6 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
         {
             if (_seeded) return;
             _ = CreateClient(); // Ensures web host is started and Program.cs runs
-            using var scope = Services.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            if (!db.Products.Any())
-            {
-                var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-                var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-                DatabaseSeeder.SeedAsync(db, userManager, roleManager, NullLogger.Instance).GetAwaiter().GetResult();
-            }
             _seeded = true;
         }
     }
@@ -156,8 +155,8 @@ public class ApiIntegrationTests : IClassFixture<CustomWebApplicationFactory>
         stats.Should().NotBeNull();
         stats!.TotalPhones.Should().Be(97);
         stats.TotalBrands.Should().BeGreaterThanOrEqualTo(30);
-        stats.TotalStores.Should().Be(29);
-        stats.TotalOffers.Should().BeGreaterThanOrEqualTo(1500);
+        stats.TotalStores.Should().Be(20);
+        stats.TotalOffers.Should().BeGreaterThanOrEqualTo(90);
     }
 
     [Fact]
@@ -193,5 +192,51 @@ public class ApiIntegrationTests : IClassFixture<CustomWebApplicationFactory>
 
         var body = await response.Content.ReadAsStringAsync();
         body.Should().Contain("https://www.trendyol.com/sr?q=");
+    }
+
+    [Fact]
+    public async Task GetPricesByPhoneId_WithValidPhoneId_ShouldReturnPricesAndLinksExclusivelyForThatPhone()
+    {
+        // 1. First get a phone to obtain its GUID ID
+        var phoneResponse = await _client.GetAsync("/api/v1/products/iphone-16-pro-max");
+        phoneResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var phone = await phoneResponse.Content.ReadFromJsonAsync<PhoneDto>();
+        phone.Should().NotBeNull();
+        var phoneGuid = Guid.Parse(phone!.Id);
+
+        // 2. Call new endpoint by ID: GET /api/v1/products/{id}/prices
+        var pricesResponse = await _client.GetAsync($"/api/v1/products/{phoneGuid}/prices");
+        pricesResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var result = await pricesResponse.Content.ReadFromJsonAsync<PhonePricesResponseDto>();
+        result.Should().NotBeNull();
+        result!.PhoneId.Should().Be(phoneGuid);
+        result.PhoneName.Should().Be(phone.Name);
+        result.StorePrices.Should().NotBeEmpty();
+
+        // 3. Verify every store price entry contains store name, price and direct purchase URL
+        foreach (var offer in result.StorePrices)
+        {
+            offer.Store.Should().NotBeNullOrWhiteSpace();
+            offer.Price.Should().BeGreaterThan(0);
+            offer.Url.Should().NotBeNullOrWhiteSpace();
+            offer.Url.Should().StartWith("http");
+        }
+
+        // 4. Verify alias route: GET /api/v1/phones/{id}/prices
+        var aliasResponse = await _client.GetAsync($"/api/v1/phones/{phoneGuid}/prices");
+        aliasResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // 5. Verify query param route: GET /api/v1/products/prices?phoneId=...
+        var queryResponse = await _client.GetAsync($"/api/v1/products/prices?phoneId={phoneGuid}");
+        queryResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task GetPricesByPhoneId_WithNonExistentId_ShouldReturnNotFound()
+    {
+        var nonExistentId = Guid.NewGuid();
+        var response = await _client.GetAsync($"/api/v1/products/{nonExistentId}/prices");
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 }

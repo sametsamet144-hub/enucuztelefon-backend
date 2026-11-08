@@ -283,49 +283,7 @@ public abstract class BaseStoreAdapter : IStoreAdapter
 
     public static string ResolveSafeStoreUrl(string storeSlug, string? rawUrl, string productTitle)
     {
-        if (!string.IsNullOrWhiteSpace(rawUrl) &&
-            Uri.TryCreate(rawUrl, UriKind.Absolute, out var parsed) &&
-            (parsed.Scheme == Uri.UriSchemeHttp || parsed.Scheme == Uri.UriSchemeHttps) &&
-            !rawUrl.Contains("-10000000") &&
-            !rawUrl.Contains("HBC0000100000"))
-        {
-            return rawUrl;
-        }
-
-        var q = Uri.EscapeDataString(string.IsNullOrWhiteSpace(productTitle) ? "cep telefonu" : productTitle.Trim());
-        return storeSlug.ToLowerInvariant() switch
-        {
-            "hepsiburada" => $"https://www.hepsiburada.com/ara?q={q}",
-            "trendyol" => $"https://www.trendyol.com/sr?q={q}",
-            "amazon" => $"https://www.amazon.com.tr/s?k={q}",
-            "n11" => $"https://www.n11.com/arama?q={q}",
-            "pttavm" => $"https://www.pttavm.com/arama?q={q}",
-            "ciceksepeti" => $"https://www.ciceksepeti.com/arama?query={q}",
-            "mediamarkt" => $"https://www.mediamarkt.com.tr/tr/search.html?query={q}",
-            "teknosa" => $"https://www.teknosa.com/arama/?s={q}",
-            "vatan" => $"https://www.vatanbilgisayar.com/arama/{q}/",
-            "turkcell" => $"https://pasaj.turkcell.com.tr/arama?q={q}",
-            "vodafone" => "https://www.vodafone.com.tr/faturaya-ek/telefonlar",
-            "turk-telekom" => "https://bireysel.turktelekom.com.tr/cihazlar",
-            "applestore" => "https://www.apple.com/tr/iphone/",
-            "samsungstore" => "https://shop.samsung.com/tr/mobil/cep-telefonu/",
-            "mistore" => "https://www.mi.com/tr/phone/",
-            "huaweistore" => "https://consumer.huawei.com/tr/phones/",
-            "honorstore" => "https://www.honor.com/tr/phones/",
-            "tecnostore" => "https://www.tecno-mobile.com/tr/phones/",
-            "infinixstore" => "https://tr.infinixmobility.com/smartphones",
-            "vivostore" => "https://myepoint.com/akilli-telefonlar",
-            "evkur" => $"https://www.evkur.com.tr/arama?q={q}",
-            "yonavm" => $"https://www.yonavm.com.tr/arama?q={q}",
-            "mutluevim" => $"https://www.mutluevim.com.tr/arama?q={q}",
-            "arcelik" => $"https://www.arcelik.com.tr/arama?text={q}",
-            "beko" => $"https://www.beko.com.tr/arama?text={q}",
-            "vestel" => $"https://www.vestel.com.tr/arama?q={q}",
-            "a101" => $"https://www.a101.com.tr/list/?search_text={q}",
-            "bim" => "https://www.bim.com.tr/Categories/100/aktuel-urunler.aspx",
-            "sok" => $"https://www.kurumsalsok.com.tr/arama?q={q}",
-            _ => $"https://www.hepsiburada.com/ara?q={q}"
-        };
+        return EnUcuzTelefon.Shared.Utils.StoreUrlHelper.ResolveSafeStoreUrl(storeSlug, rawUrl, productTitle);
     }
 
     public virtual Offer NormalizeOffer(StoreRawProduct raw, Guid variantId, Guid storeId, Guid? sellerId)

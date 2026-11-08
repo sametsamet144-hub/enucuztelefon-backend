@@ -127,6 +127,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
             b.HasIndex(x => x.StoreId);
             b.Property(x => x.Price).HasPrecision(18, 2);
             b.Property(x => x.OriginalPrice).HasPrecision(18, 2);
+            b.Property(x => x.PendingPrice).HasPrecision(18, 2);
             b.Property(x => x.ShippingCost).HasPrecision(18, 2);
             b.Property(x => x.TotalCost).HasPrecision(18, 2);
 

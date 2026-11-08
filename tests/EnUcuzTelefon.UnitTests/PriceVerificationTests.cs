@@ -159,4 +159,44 @@ public class PriceVerificationTests
         anomaly.Should().NotBeNull();
         anomaly!.DropPercent.Should().Be(80.0);
     }
+
+    [Theory]
+    [InlineData("75.798 TL", 75798.0)]
+    [InlineData("75.798,00 TL", 75798.0)]
+    [InlineData("75,798.00 ₺", 75798.0)]
+    [InlineData("69999.00", 69999.0)]
+    [InlineData("70,181.05 TL", 70181.05)]
+    [InlineData("109.899 TRY", 109899.0)]
+    [InlineData("118.999,00 TL", 118999.0)]
+    [InlineData("75798,50", 75798.50)]
+    public void ParseTurkishPrice_ShouldCorrectlyParseVariousFormats(string rawPrice, decimal expected)
+    {
+        var parsed = LiveOfferVerificationEngine.ParseTurkishPrice(rawPrice);
+        parsed.Should().NotBeNull();
+        parsed!.Value.Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("https://www.hepsiburada.com/iphone-15-128-gb-p-HBCV921E9E11?magaza=Hepsiburada", true)]
+    [InlineData("https://www.hepsiburada.com/redmi-note-13-pro-5g-512-gb-p-HBCV2DAF0546?magaza=Hepsiburada", true)]
+    [InlineData("https://www.ciceksepeti.com/iphone-15-128-gb-kc681457071", true)]
+    [InlineData("https://www.teknosa.com/iphone-15-128gb-p-515058567?shopId=teknosa", true)]
+    [InlineData("https://www.hepsiburada.com/apple-iphone-15-128-gb-mavi-p-HBCV00004X9ZCK?magaza=macinternet", false)]
+    [InlineData("https://www.amazon.com.tr/dp/B0CHXGB3NG", false)]
+    [InlineData("https://www.teknosa.com/apple-iphone-15-128gb-siyah-akilli-telefon-p-125079197", false)]
+    [InlineData("https://www.trendyol.com/apple/iphone-15-128-gb-siyah-p-762254878", false)]
+    public void IsSyntheticUrl_ShouldDetectSyntheticAndAuthenticUrls(string url, bool expectedSynthetic)
+    {
+        var isSynthetic = EnUcuzTelefon.Shared.Utils.StoreUrlHelper.IsSyntheticUrl(url);
+        isSynthetic.Should().Be(expectedSynthetic);
+    }
+
+    [Fact]
+    public void ResolveSafeStoreUrl_WhenGivenSyntheticUrl_ShouldReturnWorkingStoreSearchUrl()
+    {
+        var badHbUrl = "https://www.hepsiburada.com/iphone-15-128-gb-p-HBCV921E9E11?magaza=Hepsiburada";
+        var safeUrl = EnUcuzTelefon.Shared.Utils.StoreUrlHelper.ResolveSafeStoreUrl("hepsiburada", badHbUrl, "iPhone 15 128GB");
+
+        safeUrl.Should().Be("https://www.hepsiburada.com/ara?q=iPhone%2015%20128GB");
+    }
 }

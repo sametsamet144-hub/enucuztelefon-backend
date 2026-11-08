@@ -54,3 +54,27 @@ public interface IPriceAlertNotifier
 {
     Task CheckAndNotifyAlertsAsync(Guid variantId, decimal currentLowestPrice, CancellationToken cancellationToken = default);
 }
+
+public enum VerificationOutcome { Inconclusive = 0, Confirmed = 1, Dead = 2 }
+
+public sealed record LiveOfferVerificationResult(
+    bool IsSuccess,
+    bool IsUrlAlive,                 // geriye uyumluluk: Outcome != Dead
+    decimal? ExtractedPrice,         // SADECE ürün sayfasından okunduysa dolu
+    string? ResolvedUrl,
+    string? ExtractedTitle,
+    string DetectionSource,
+    VerificationOutcome Outcome = VerificationOutcome.Inconclusive,
+    bool PriceFromProductPage = false,
+    bool? InStock = null);
+
+public interface ILiveOfferVerificationEngine
+{
+    Task<LiveOfferVerificationResult> VerifyAndExtractOfferAsync(
+        string url,
+        string storeSlug,
+        string phoneName,
+        int? storageGb,
+        decimal currentPrice,
+        CancellationToken cancellationToken = default);
+}

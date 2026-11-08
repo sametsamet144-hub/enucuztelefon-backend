@@ -65,7 +65,7 @@ public class WorkerScrapingVerificationTests : IClassFixture<CustomWebApplicatio
                 var searchResult = await adapter.SearchProductsAsync(searchQuery, CancellationToken.None);
 
                 searchResult.IsSuccess.Should().BeTrue();
-                searchResult.Value.Should().NotBeEmpty();
+                searchResult.Value.Should().NotBeEmpty($"Product '{product.Name}' must return at least one search result in store '{adapter.StoreSlug}'");
 
                 var raw = searchResult.Value.First();
 

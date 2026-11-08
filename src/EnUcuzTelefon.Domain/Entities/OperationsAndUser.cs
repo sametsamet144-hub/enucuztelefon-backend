@@ -36,6 +36,7 @@ public class ScrapingJob : BaseEntity, IAggregateRoot
     public JobStatus Status { get; set; } = JobStatus.Pending;
     public DateTime StartedAt { get; set; } = DateTime.UtcNow;
     public DateTime? CompletedAt { get; set; }
+    public DateTime? HeartbeatAt { get; set; }
     public int ItemsProcessed { get; set; }
     public int ItemsUpdated { get; set; }
     public int ItemsFailed { get; set; }

@@ -106,6 +106,8 @@ public class Offer : BaseEntity, IAggregateRoot
     public string? InstallmentText { get; set; }
     public bool IsOfficial { get; set; }
     public bool IsVerified { get; set; } = true;
+    public int ConsecutiveFailures { get; set; } = 0;
+    public decimal? PendingPrice { get; set; }
 
     public StockStatus? StockStatus { get; set; }
     public ICollection<PriceHistory> PriceHistories { get; set; } = new List<PriceHistory>();

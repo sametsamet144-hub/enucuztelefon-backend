@@ -13,6 +13,7 @@ public interface IProductService
     Task<Result<PhoneDto>> GetPhoneBySlugAsync(string slug, CancellationToken cancellationToken = default);
     Task<Result<IReadOnlyList<StorePriceDto>>> GetOffersByPhoneSlugAsync(string slug, CancellationToken cancellationToken = default);
     Task<Result<IReadOnlyList<PriceHistoryDto>>> GetPriceHistoryByPhoneSlugAsync(string slug, CancellationToken cancellationToken = default);
+    Task<Result<PhonePricesResponseDto>> GetPricesByPhoneIdAsync(Guid phoneId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<PhoneDto>> GetDealsAsync(int limit = 6, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<PhoneDto>> GetCheapestAsync(int limit = 6, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<PhoneDto>> GetNewReleasesAsync(int limit = 6, CancellationToken cancellationToken = default);
@@ -115,7 +116,7 @@ public class ProductService : IProductService
             "rating" => query.OrderByDescending(p => p.Rating),
             "price-drop" => query.OrderByDescending(p => p.Variants.Max(v => v.PriceDropPercent)),
             _ => query
-                .OrderByDescending(p => p.Variants.Any(v => v.Offers.Any(o => o.IsAvailable && o.Price > 0)))
+                .OrderByDescending(p => p.Variants.Any(v => v.Offers.Any(o => o.Price > 0) || v.LowestPrice > 0))
                 .ThenByDescending(p => p.Rating)
                 .ThenByDescending(p => p.ReviewCount)
         };
@@ -210,48 +211,7 @@ public class ProductService : IProductService
     {
         if (o == null || !o.IsAvailable || o.Price <= 0 || o.Store == null) return false;
         if (DisallowedStoreSlugs.Contains(o.Store.Slug)) return false;
-        if (string.IsNullOrWhiteSpace(o.Url)) return false;
-
-        var u = o.Url.ToLowerInvariant();
-        if (u.Contains("/arama") ||
-            u.Contains("/ara?") ||
-            u.Contains("/ara/") ||
-            u.Contains("/sr?q=") ||
-            u.Contains("/sr?") ||
-            u.Contains("/sr/") ||
-            u.Contains("/s?k=") ||
-            u.Contains("/s?") ||
-            u.Contains("search_text=") ||
-            u.Contains("search.html") ||
-            u.Contains("?query=") ||
-            u.Contains("&query=") ||
-            u.Contains("?text=") ||
-            u.Contains("&text=") ||
-            u.Contains("?q=") ||
-            u.Contains("&q=") ||
-            u.Contains("/categories/") ||
-            u.Contains("/kategori/") ||
-            u.Contains("/katalog/") ||
-            u.Contains("/kampanyalar/") ||
-            u.Contains("/faturaya-ek") ||
-            u.Contains("/cihazlar") ||
-            u.Contains("/mobil/cep-telefonu") ||
-            u.Contains("placeholder") ||
-            u.Contains("-10000000") ||
-            u.Contains("hbc0000100000") ||
-            u.Contains("myepoint.com") ||
-            u.Contains("enucuztelefon.com"))
-        {
-            return false;
-        }
-
-        if (u.EndsWith("apple.com/tr/iphone") || u.EndsWith("apple.com/tr/iphone/") ||
-            u.EndsWith("shop.samsung.com/tr") || u.EndsWith("shop.samsung.com/tr/"))
-        {
-            return false;
-        }
-
-        return true;
+        return EnUcuzTelefon.Shared.Utils.StoreUrlHelper.IsDirectProductUrl(o.Url);
     }
 
     public async Task<Result<IReadOnlyList<StorePriceDto>>> GetOffersByPhoneSlugAsync(string slug, CancellationToken cancellationToken = default)
@@ -275,7 +235,12 @@ public class ProductService : IProductService
 
         var offers = product.Variants
             .SelectMany(v => v.Offers)
-            .Where(IsRealDirectOffer)
+            .Where(o => o != null && o.IsAvailable && o.Price > 0 && o.Store != null && !string.IsNullOrWhiteSpace(o.Url) && !DisallowedStoreSlugs.Contains(o.Store.Slug))
+            .GroupBy(o => o.Store!.Slug, StringComparer.OrdinalIgnoreCase)
+            .Select(g => g
+                .OrderByDescending(o => EnUcuzTelefon.Shared.Utils.StoreUrlHelper.IsDirectProductUrl(o.Url))
+                .ThenBy(o => o.Price)
+                .First())
             .OrderBy(o => o.Price)
             .Select(o => new StorePriceDto(
                 Store: o.Store.Name,
@@ -283,7 +248,7 @@ public class ProductService : IProductService
                 SellerName: o.Seller?.Name ?? o.Store.Name,
                 SellerRating: o.Seller?.Rating ?? o.Store.ReliabilityScore,
                 Price: o.Price,
-                Url: o.Url,
+                Url: EnUcuzTelefon.Shared.Utils.StoreUrlHelper.ResolveSafeStoreUrl(o.Store?.Slug ?? "", o.Url, product.Name),
                 IsAvailable: o.IsAvailable,
                 LastUpdated: o.LastCheckedAt.ToString("o"),
                 ShippingText: o.ShippingText,
@@ -293,6 +258,84 @@ public class ProductService : IProductService
             .ToList();
 
         return Result.Success<IReadOnlyList<StorePriceDto>>(offers);
+    }
+
+    public async Task<Result<PhonePricesResponseDto>> GetPricesByPhoneIdAsync(Guid phoneId, CancellationToken cancellationToken = default)
+    {
+        var cacheKey = $"phone:prices:{phoneId}";
+        var cached = await _cache.GetAsync<PhonePricesResponseDto>(cacheKey, cancellationToken);
+        if (cached != null) return Result.Success(cached);
+
+        var product = await _context.Products
+            .Include(p => p.Brand)
+            .Include(p => p.Variants)
+                .ThenInclude(v => v.Offers)
+                    .ThenInclude(o => o.Store)
+            .Include(p => p.Variants)
+                .ThenInclude(v => v.Offers)
+                    .ThenInclude(o => o.Seller)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == phoneId, cancellationToken);
+
+        if (product == null)
+        {
+            return Result.Failure<PhonePricesResponseDto>(Error.NotFound("Product.NotFound", $"Phone with id '{phoneId}' was not found."));
+        }
+
+        var offerItems = product.Variants
+            .SelectMany(v => v.Offers.Select(o => new { Offer = o, Variant = v }))
+            .Where(x => x.Offer != null && x.Offer.IsAvailable && x.Offer.Price > 0 && x.Offer.Store != null && !string.IsNullOrWhiteSpace(x.Offer.Url) && !DisallowedStoreSlugs.Contains(x.Offer.Store.Slug))
+            .GroupBy(x => x.Offer.Store.Slug, StringComparer.OrdinalIgnoreCase)
+            .Select(g => g
+                .OrderByDescending(x => EnUcuzTelefon.Shared.Utils.StoreUrlHelper.IsDirectProductUrl(x.Offer.Url))
+                .ThenBy(x => x.Offer.Price)
+                .First())
+            .OrderBy(x => x.Offer.Price)
+            .Select(x => new PhoneStorePriceItemDto(
+                Store: x.Offer.Store.Name,
+                StoreSlug: x.Offer.Store.Slug,
+                StoreLogoUrl: x.Offer.Store.LogoUrl,
+                Price: x.Offer.Price,
+                OriginalPrice: x.Offer.OriginalPrice,
+                Url: EnUcuzTelefon.Shared.Utils.StoreUrlHelper.ResolveSafeStoreUrl(x.Offer.Store?.Slug ?? "", x.Offer.Url, product.Name),
+                SellerName: x.Offer.Seller?.Name ?? x.Offer.Store.Name,
+                SellerRating: x.Offer.Seller?.Rating ?? x.Offer.Store.ReliabilityScore,
+                IsAvailable: x.Offer.IsAvailable,
+                Variant: $"{x.Variant.StorageGb} GB" + (!string.IsNullOrWhiteSpace(x.Variant.Color) ? $" - {x.Variant.Color}" : string.Empty),
+                StorageGb: x.Variant.StorageGb > 0 ? x.Variant.StorageGb : null,
+                Color: string.IsNullOrWhiteSpace(x.Variant.Color) ? null : x.Variant.Color,
+                ShippingText: x.Offer.ShippingText ?? x.Offer.Store.ShippingInfo,
+                GuaranteeText: x.Offer.GuaranteeText ?? "2 Yıl Resmi Distribütör Garantili",
+                InstallmentText: x.Offer.InstallmentText,
+                IsOfficial: x.Offer.IsOfficial || x.Offer.Store.IsVerified,
+                LastCheckedAt: x.Offer.LastCheckedAt
+            ))
+            .ToList();
+
+        var lowestPrice = offerItems.Count > 0 
+            ? offerItems.Min(o => o.Price) 
+            : (product.Variants.Count > 0 ? product.Variants.Min(v => v.LowestPrice) : 0m);
+
+        var highestPrice = offerItems.Count > 0 
+            ? offerItems.Max(o => o.Price) 
+            : (product.Variants.Count > 0 ? product.Variants.Max(v => v.HighestPrice) : 0m);
+
+        var response = new PhonePricesResponseDto(
+            PhoneId: product.Id,
+            PhoneName: product.Name,
+            Slug: product.Slug,
+            Brand: product.Brand?.Name ?? string.Empty,
+            BrandSlug: product.Brand?.Slug ?? string.Empty,
+            ImageUrl: product.ImageUrl,
+            LowestPrice: lowestPrice,
+            HighestPrice: highestPrice,
+            TotalStores: offerItems.Select(o => o.StoreSlug).Distinct().Count(),
+            TotalOffers: offerItems.Count,
+            StorePrices: offerItems
+        );
+
+        await _cache.SetAsync(cacheKey, response, TimeSpan.FromMinutes(10), cancellationToken);
+        return Result.Success(response);
     }
 
     public async Task<Result<IReadOnlyList<PriceHistoryDto>>> GetPriceHistoryByPhoneSlugAsync(string slug, CancellationToken cancellationToken = default)
@@ -338,7 +381,7 @@ public class ProductService : IProductService
                 .ThenInclude(v => v.Offers)
                     .ThenInclude(o => o.Store)
             .Include(p => p.Specifications)
-            .Where(p => p.IsActive && p.Variants.Any(v => v.Offers.Any(o => o.IsAvailable && o.Price > 0) && v.IsPriceDropped && v.PriceDropPercent >= 2))
+            .Where(p => p.IsActive && p.Variants.Any(v => (v.Offers.Any(o => o.Price > 0) || v.LowestPrice > 0) && v.IsPriceDropped && v.PriceDropPercent >= 2))
             .OrderByDescending(p => p.Variants.Max(v => v.PriceDropPercent))
             .Take(limit)
             .AsNoTracking()
@@ -357,8 +400,8 @@ public class ProductService : IProductService
                 .ThenInclude(v => v.Offers)
                     .ThenInclude(o => o.Store)
             .Include(p => p.Specifications)
-            .Where(p => p.IsActive && p.Variants.Any(v => v.Offers.Any(o => o.IsAvailable && o.Price > 0)))
-            .OrderBy(p => p.Variants.SelectMany(v => v.Offers).Where(o => o.IsAvailable && o.Price > 0).Min(o => (decimal?)o.Price) ?? 999999m)
+            .Where(p => p.IsActive && p.Variants.Any(v => v.Offers.Any(o => o.Price > 0) || v.LowestPrice > 0))
+            .OrderBy(p => p.Variants.SelectMany(v => v.Offers).Where(o => o.Price > 0).Min(o => (decimal?)o.Price) ?? (p.Variants.Min(v => (decimal?)v.LowestPrice) ?? 999999m))
             .Take(limit)
             .AsNoTracking()
             .ToListAsync(cancellationToken);
@@ -406,7 +449,12 @@ public class ProductService : IProductService
         
         var availableOffers = p.Variants
             .SelectMany(v => v.Offers)
-            .Where(IsRealDirectOffer)
+            .Where(o => o != null && o.IsAvailable && o.Price > 0 && o.Store != null && !string.IsNullOrWhiteSpace(o.Url) && !DisallowedStoreSlugs.Contains(o.Store.Slug))
+            .GroupBy(o => o.Store!.Slug, StringComparer.OrdinalIgnoreCase)
+            .Select(g => g
+                .OrderByDescending(o => EnUcuzTelefon.Shared.Utils.StoreUrlHelper.IsDirectProductUrl(o.Url))
+                .ThenBy(o => o.Price)
+                .First())
             .OrderBy(o => o.Price)
             .ToList();
 
@@ -425,6 +473,15 @@ public class ProductService : IProductService
                 : Math.Round(firstOffer.Price * 1.06m, 2);
             lowestStore = firstOffer.Store?.Name ?? "Yetkili Mağaza";
             lowestUrl = firstOffer.Url;
+        }
+        else if (primaryVariant != null && primaryVariant.LowestPrice > 0)
+        {
+            lowestPrice = primaryVariant.LowestPrice;
+            highestPrice = primaryVariant.HighestPrice > primaryVariant.LowestPrice
+                ? primaryVariant.HighestPrice
+                : Math.Round(primaryVariant.LowestPrice * 1.06m, 2);
+            lowestStore = primaryVariant.LowestPriceStoreName ?? "Yetkili Mağaza";
+            lowestUrl = primaryVariant.LowestPriceUrl;
         }
 
         decimal? sixMonthLowest = null;
@@ -447,7 +504,7 @@ public class ProductService : IProductService
                 SellerName: o.Seller?.Name ?? o.Store?.Name ?? "Yetkili Satıcı",
                 SellerRating: o.Seller?.Rating ?? o.Store?.ReliabilityScore ?? 9.5,
                 Price: o.Price,
-                Url: o.Url,
+                Url: EnUcuzTelefon.Shared.Utils.StoreUrlHelper.ResolveSafeStoreUrl(o.Store?.Slug ?? "", o.Url, p.Name),
                 IsAvailable: o.IsAvailable,
                 LastUpdated: o.LastCheckedAt.ToString("o"),
                 ShippingText: o.ShippingText,
