@@ -13,8 +13,7 @@ public static class MarketAggregator
     {
         "hepsiburada", "trendyol", "amazon", "n11", "pttavm", "ciceksepeti", "mediamarkt", "teknosa", "vatan",
         "turkcell", "vodafone", "turk-telekom", "applestore", "samsungstore", "mistore", "huaweistore",
-        "honorstore", "tecnostore", "infinixstore", "vivostore", "evkur", "yonavm", "mutluevim",
-        "arcelik", "beko", "vestel", "a101", "bim", "sok"
+        "honorstore", "tecnostore", "infinixstore", "vivostore"
     };
 
     private static readonly ConcurrentDictionary<string, (DateTime CachedAt, IReadOnlyList<AggregatedMarketOffer> Offers)> Cache =
@@ -82,16 +81,67 @@ public static class MarketAggregator
         if (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps) return false;
 
         var u = url.ToLowerInvariant();
-        if (u.Contains("/sr?q=") ||
-            u.Contains("/ara?q=") ||
-            u.Contains("/arama") ||
+        var host = uri.Host.ToLowerInvariant();
+        var path = uri.AbsolutePath.ToLowerInvariant();
+
+        // Reject non-phone supermarket / installment chains
+        if (host.Contains("bim.com.tr") ||
+            host.Contains("a101.com.tr") ||
+            host.Contains("sokmarket.com.tr") ||
+            host.Contains("kurumsalsok.com.tr") ||
+            host.Contains("evkur.com.tr") ||
+            host.Contains("yonavm.com.tr") ||
+            host.Contains("mutluevim.com.tr") ||
+            host.Contains("arcelik.com.tr") ||
+            host.Contains("beko.com.tr") ||
+            host.Contains("vestel.com.tr") ||
+            host.Contains("myepoint.com") ||
+            host.Contains("enucuztelefon.com"))
+        {
+            return false;
+        }
+
+        // Search or generic query / category / catalog fallback URLs
+        if (u.Contains("/arama") ||
+            u.Contains("/ara?") ||
+            u.Contains("/ara/") ||
+            u.Contains("/sr?q=") ||
+            u.Contains("/sr?") ||
+            u.Contains("/sr/") ||
             u.Contains("/s?k=") ||
+            u.Contains("/s?") ||
+            u.Contains("search_text=") ||
             u.Contains("search.html") ||
-            u.Contains("/faturaya-ek/") ||
-            u.EndsWith("/cihazlar") ||
-            u.EndsWith("/tr/iphone/") ||
-            u.EndsWith("/tr/phone/") ||
-            u.EndsWith("/mobil/cep-telefonu/"))
+            u.Contains("?query=") ||
+            u.Contains("&query=") ||
+            u.Contains("?text=") ||
+            u.Contains("&text=") ||
+            u.Contains("?q=") ||
+            u.Contains("&q=") ||
+            u.Contains("/categories/") ||
+            u.Contains("/kategori/") ||
+            u.Contains("/katalog/") ||
+            u.Contains("/kampanyalar/") ||
+            u.Contains("/faturaya-ek") ||
+            u.Contains("/cihazlar") ||
+            u.Contains("/mobil/cep-telefonu") ||
+            u.Contains("placeholder") ||
+            u.Contains("-10000000") ||
+            u.Contains("hbc0000100000"))
+        {
+            return false;
+        }
+
+        // Reject bare domain roots or generic brand pages
+        if (path == "/" || string.IsNullOrWhiteSpace(path) || path == "/tr" || path == "/tr/")
+        {
+            return false;
+        }
+        if (u.EndsWith("apple.com/tr/iphone") || u.EndsWith("apple.com/tr/iphone/"))
+        {
+            return false;
+        }
+        if (u.EndsWith("shop.samsung.com/tr") || u.EndsWith("shop.samsung.com/tr/"))
         {
             return false;
         }
@@ -291,9 +341,8 @@ public static class MarketAggregator
         catch { /* graceful fallback */ }
 
         var results = offersByStore.Values
-            .Where(o => AllowedStoreSlugs.Contains(o.StoreSlug) && o.Price >= 1500)
+            .Where(o => AllowedStoreSlugs.Contains(o.StoreSlug) && o.Price >= 1500 && o.IsDirectProductUrl)
             .OrderBy(o => o.Price)
-            .ThenByDescending(o => o.IsDirectProductUrl)
             .ToList();
 
         if (results.Any())
@@ -747,8 +796,10 @@ public static class MarketAggregator
                         if (!string.IsNullOrWhiteSpace(stSlug) && AllowedStoreSlugs.Contains(stSlug) && p > 0 && !string.IsNullOrWhiteSpace(u))
                         {
                             var isDirect = IsDirectProductUrl(u);
-                            // Include direct product URLs or top 3 cheapest seed offers
-                            offers.Add(new AggregatedMarketOffer(stSlug, stName, seller, p, u, isDirect));
+                            if (isDirect)
+                            {
+                                offers.Add(new AggregatedMarketOffer(stSlug, stName, seller, p, u, true));
+                            }
                         }
                     }
                 }

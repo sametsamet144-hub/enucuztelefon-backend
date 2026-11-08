@@ -201,6 +201,59 @@ public class ProductService : IProductService
         return Result.Success(dto);
     }
 
+    private static readonly HashSet<string> DisallowedStoreSlugs = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "bim", "a101", "sok", "evkur", "yonavm", "mutluevim", "arcelik", "beko", "vestel"
+    };
+
+    private static bool IsRealDirectOffer(Offer o)
+    {
+        if (o == null || !o.IsAvailable || o.Price <= 0 || o.Store == null) return false;
+        if (DisallowedStoreSlugs.Contains(o.Store.Slug)) return false;
+        if (string.IsNullOrWhiteSpace(o.Url)) return false;
+
+        var u = o.Url.ToLowerInvariant();
+        if (u.Contains("/arama") ||
+            u.Contains("/ara?") ||
+            u.Contains("/ara/") ||
+            u.Contains("/sr?q=") ||
+            u.Contains("/sr?") ||
+            u.Contains("/sr/") ||
+            u.Contains("/s?k=") ||
+            u.Contains("/s?") ||
+            u.Contains("search_text=") ||
+            u.Contains("search.html") ||
+            u.Contains("?query=") ||
+            u.Contains("&query=") ||
+            u.Contains("?text=") ||
+            u.Contains("&text=") ||
+            u.Contains("?q=") ||
+            u.Contains("&q=") ||
+            u.Contains("/categories/") ||
+            u.Contains("/kategori/") ||
+            u.Contains("/katalog/") ||
+            u.Contains("/kampanyalar/") ||
+            u.Contains("/faturaya-ek") ||
+            u.Contains("/cihazlar") ||
+            u.Contains("/mobil/cep-telefonu") ||
+            u.Contains("placeholder") ||
+            u.Contains("-10000000") ||
+            u.Contains("hbc0000100000") ||
+            u.Contains("myepoint.com") ||
+            u.Contains("enucuztelefon.com"))
+        {
+            return false;
+        }
+
+        if (u.EndsWith("apple.com/tr/iphone") || u.EndsWith("apple.com/tr/iphone/") ||
+            u.EndsWith("shop.samsung.com/tr") || u.EndsWith("shop.samsung.com/tr/"))
+        {
+            return false;
+        }
+
+        return true;
+    }
+
     public async Task<Result<IReadOnlyList<StorePriceDto>>> GetOffersByPhoneSlugAsync(string slug, CancellationToken cancellationToken = default)
     {
         var canonicalSlug = ResolveCanonicalSlug(slug);
@@ -222,6 +275,7 @@ public class ProductService : IProductService
 
         var offers = product.Variants
             .SelectMany(v => v.Offers)
+            .Where(IsRealDirectOffer)
             .OrderBy(o => o.Price)
             .Select(o => new StorePriceDto(
                 Store: o.Store.Name,
@@ -352,7 +406,7 @@ public class ProductService : IProductService
         
         var availableOffers = p.Variants
             .SelectMany(v => v.Offers)
-            .Where(o => o.IsAvailable && o.Price > 0)
+            .Where(IsRealDirectOffer)
             .OrderBy(o => o.Price)
             .ToList();
 

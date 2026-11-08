@@ -702,11 +702,9 @@ public static class DatabaseSeeder
                 : Math.Round(lowestPrice * 0.95m, 0);
             variant.IsPriceDropped = isPriceDropped && priceDropPercent >= 2;
             variant.PriceDropPercent = variant.IsPriceDropped ? Math.Clamp(priceDropPercent, 2, 35) : 0;
-            variant.LowestPriceStoreName = priceStore;
-            if (!string.IsNullOrWhiteSpace(priceUrl))
-            {
-                variant.LowestPriceUrl = priceUrl;
-            }
+            var isDirectPriceUrl = MarketAggregator.IsDirectProductUrl(priceUrl);
+            variant.LowestPriceStoreName = isDirectPriceUrl ? priceStore : null;
+            variant.LowestPriceUrl = isDirectPriceUrl ? priceUrl : null;
 
             // Remove any existing offers belonging to stores not in AllowedStoreSlugs or containing fake search URLs
             var invalidOffers = variant.Offers
@@ -782,6 +780,24 @@ public static class DatabaseSeeder
                 }
             }
 
+            var verifiedOffers = variant.Offers
+                .Where(o => o.IsAvailable && o.Price > 0 && o.Store != null && AllowedStoreSlugs.Contains(o.Store.Slug) && MarketAggregator.IsDirectProductUrl(o.Url))
+                .OrderBy(o => o.Price)
+                .ToList();
+            if (verifiedOffers.Any())
+            {
+                var minOffer = verifiedOffers.First();
+                variant.LowestPrice = minOffer.Price;
+                variant.LowestPriceStoreName = minOffer.Store?.Name ?? priceStore;
+                variant.LowestPriceUrl = minOffer.Url;
+            }
+            else if (!isDirectPriceUrl)
+            {
+                variant.LowestPrice = 0;
+                variant.LowestPriceStoreName = null;
+                variant.LowestPriceUrl = null;
+            }
+
             repairedVariants++;
         }
 
@@ -821,8 +837,7 @@ public static class DatabaseSeeder
     {
         "hepsiburada", "trendyol", "amazon", "n11", "pttavm", "ciceksepeti", "mediamarkt", "teknosa", "vatan",
         "turkcell", "vodafone", "turk-telekom", "applestore", "samsungstore", "mistore", "huaweistore",
-        "honorstore", "tecnostore", "infinixstore", "vivostore", "evkur", "yonavm", "mutluevim",
-        "arcelik", "beko", "vestel", "a101", "bim", "sok"
+        "honorstore", "tecnostore", "infinixstore", "vivostore"
     };
 
     public static List<Store> GetPredefinedStores() => new()
@@ -846,15 +861,6 @@ public static class DatabaseSeeder
         new() { Name = "Honor", Slug = "honorstore", Website = "https://www.honor.com/tr", Type = StoreType.BrandOfficial, TypeLabel = "Resmi Üretici Satış Mağazası", Status = StoreStatus.Active, IntegrationMethod = IntegrationMethod.DirectPartnerApi, ProductCount = 40, VerifiedPriceCount = 40, LastSyncTime = DateTime.UtcNow.AddMinutes(-20), ReliabilityScore = 9.8, ShippingInfo = "Resmi Honor Garantili Kargo", ReturnPolicy = "14 Gün İade", DistributorGuarantee = true },
         new() { Name = "Tecno", Slug = "tecnostore", Website = "https://www.tecno-mobile.com/tr", Type = StoreType.BrandOfficial, TypeLabel = "Resmi Üretici Satış Mağazası", Status = StoreStatus.Active, IntegrationMethod = IntegrationMethod.DirectPartnerApi, ProductCount = 35, VerifiedPriceCount = 35, LastSyncTime = DateTime.UtcNow.AddMinutes(-25), ReliabilityScore = 9.7, ShippingInfo = "Resmi Distribütör Güvencesi", ReturnPolicy = "14 Gün İade", DistributorGuarantee = true },
         new() { Name = "Infinix", Slug = "infinixstore", Website = "https://tr.infinixmobility.com", Type = StoreType.BrandOfficial, TypeLabel = "Resmi Üretici Satış Mağazası", Status = StoreStatus.Active, IntegrationMethod = IntegrationMethod.DirectPartnerApi, ProductCount = 30, VerifiedPriceCount = 30, LastSyncTime = DateTime.UtcNow.AddMinutes(-26), ReliabilityScore = 9.7, ShippingInfo = "Infinix Türkiye Garantili", ReturnPolicy = "14 Gün İade", DistributorGuarantee = true },
-        new() { Name = "Vivo", Slug = "vivostore", Website = "https://myepoint.com", Type = StoreType.BrandOfficial, TypeLabel = "Resmi Üretici Satış Mağazası", Status = StoreStatus.Active, IntegrationMethod = IntegrationMethod.DirectPartnerApi, ProductCount = 45, VerifiedPriceCount = 45, LastSyncTime = DateTime.UtcNow.AddMinutes(-22), ReliabilityScore = 9.8, ShippingInfo = "Vivo Türkiye Güvencesi", ReturnPolicy = "14 Gün İade", DistributorGuarantee = true },
-        new() { Name = "Evkur", Slug = "evkur", Website = "https://www.evkur.com.tr", Type = StoreType.Retailer, TypeLabel = "Perakende & Taksitli Alışveriş", Status = StoreStatus.Active, IntegrationMethod = IntegrationMethod.XmlFeed, ProductCount = 520, VerifiedPriceCount = 510, LastSyncTime = DateTime.UtcNow.AddMinutes(-30), ReliabilityScore = 9.5, ShippingInfo = "Taksitli & Güvenli Teslimat", ReturnPolicy = "14 Gün Yasal İade", DistributorGuarantee = true },
-        new() { Name = "Yön AVM", Slug = "yonavm", Website = "https://www.yonavm.com.tr", Type = StoreType.Retailer, TypeLabel = "Perakende & Taksitli Mağaza", Status = StoreStatus.Active, IntegrationMethod = IntegrationMethod.XmlFeed, ProductCount = 310, VerifiedPriceCount = 305, LastSyncTime = DateTime.UtcNow.AddMinutes(-35), ReliabilityScore = 9.3, ShippingInfo = "Elden Taksit Seçeneği", ReturnPolicy = "14 Gün İade", DistributorGuarantee = true },
-        new() { Name = "Mutlu Evim", Slug = "mutluevim", Website = "https://www.mutluevim.com.tr", Type = StoreType.Retailer, TypeLabel = "Senetli & Taksitli Alışveriş", Status = StoreStatus.Active, IntegrationMethod = IntegrationMethod.XmlFeed, ProductCount = 280, VerifiedPriceCount = 275, LastSyncTime = DateTime.UtcNow.AddMinutes(-40), ReliabilityScore = 9.2, ShippingInfo = "Senetli Alışveriş Güvencesi", ReturnPolicy = "14 Gün İade", DistributorGuarantee = true },
-        new() { Name = "Arçelik", Slug = "arcelik", Website = "https://www.arcelik.com.tr", Type = StoreType.Retailer, TypeLabel = "Yetkili Satıcı & Teknoloji", Status = StoreStatus.Active, IntegrationMethod = IntegrationMethod.XmlFeed, ProductCount = 450, VerifiedPriceCount = 440, LastSyncTime = DateTime.UtcNow.AddMinutes(-24), ReliabilityScore = 9.9, ShippingInfo = "Yetkili Servis & Mağaza Teslimat", ReturnPolicy = "14 Gün Koşulsuz İade", DistributorGuarantee = true },
-        new() { Name = "Beko", Slug = "beko", Website = "https://www.beko.com.tr", Type = StoreType.Retailer, TypeLabel = "Yetkili Satıcı & Teknoloji", Status = StoreStatus.Active, IntegrationMethod = IntegrationMethod.XmlFeed, ProductCount = 420, VerifiedPriceCount = 410, LastSyncTime = DateTime.UtcNow.AddMinutes(-28), ReliabilityScore = 9.9, ShippingInfo = "Beko Yetkili Satıcı Güvencesi", ReturnPolicy = "14 Gün Koşulsuz İade", DistributorGuarantee = true },
-        new() { Name = "Vestel", Slug = "vestel", Website = "https://www.vestel.com.tr", Type = StoreType.Retailer, TypeLabel = "Yerli Teknoloji & Perakende", Status = StoreStatus.Active, IntegrationMethod = IntegrationMethod.XmlFeed, ProductCount = 380, VerifiedPriceCount = 370, LastSyncTime = DateTime.UtcNow.AddMinutes(-32), ReliabilityScore = 9.7, ShippingInfo = "Vestel Yetkili Satış ve Servis", ReturnPolicy = "14 Gün İade", DistributorGuarantee = true },
-        new() { Name = "A101", Slug = "a101", Website = "https://www.a101.com.tr", Type = StoreType.Retailer, TypeLabel = "Süpermarket & Online Ekstra", Status = StoreStatus.Active, IntegrationMethod = IntegrationMethod.MerchantCsv, ProductCount = 290, VerifiedPriceCount = 280, LastSyncTime = DateTime.UtcNow.AddMinutes(-15), ReliabilityScore = 9.4, ShippingInfo = "A101 Kapıda ve Kargo", ReturnPolicy = "14 Gün İade", DistributorGuarantee = true },
-        new() { Name = "BİM", Slug = "bim", Website = "https://www.bim.com.tr", Type = StoreType.Retailer, TypeLabel = "Perakende Zinciri & Aktüel", Status = StoreStatus.Active, IntegrationMethod = IntegrationMethod.MerchantCsv, ProductCount = 180, VerifiedPriceCount = 175, LastSyncTime = DateTime.UtcNow.AddMinutes(-20), ReliabilityScore = 9.5, ShippingInfo = "BİM Aktüel ve Online Güvencesi", ReturnPolicy = "Fiş ile Mağazadan Kolay İade", DistributorGuarantee = true },
-        new() { Name = "ŞOK", Slug = "sok", Website = "https://www.kurumsalsok.com.tr", Type = StoreType.Retailer, TypeLabel = "Perakende Zinciri & Cepte ŞOK", Status = StoreStatus.Active, IntegrationMethod = IntegrationMethod.MerchantCsv, ProductCount = 220, VerifiedPriceCount = 215, LastSyncTime = DateTime.UtcNow.AddMinutes(-18), ReliabilityScore = 9.4, ShippingInfo = "Cepte ŞOK ile Adrese Teslim", ReturnPolicy = "14 Gün İade", DistributorGuarantee = true }
+        new() { Name = "Vivo", Slug = "vivostore", Website = "https://myepoint.com", Type = StoreType.BrandOfficial, TypeLabel = "Resmi Üretici Satış Mağazası", Status = StoreStatus.Active, IntegrationMethod = IntegrationMethod.DirectPartnerApi, ProductCount = 45, VerifiedPriceCount = 45, LastSyncTime = DateTime.UtcNow.AddMinutes(-22), ReliabilityScore = 9.8, ShippingInfo = "Vivo Türkiye Güvencesi", ReturnPolicy = "14 Gün İade", DistributorGuarantee = true }
     };
 }
