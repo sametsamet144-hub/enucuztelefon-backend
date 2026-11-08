@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Globalization;
 using System.Text.RegularExpressions;
 using EnUcuzTelefon.Application.Interfaces;
 using EnUcuzTelefon.Domain.Entities;
@@ -119,6 +120,80 @@ public abstract class BaseStoreAdapter : IStoreAdapter
     protected virtual Task<Result<IReadOnlyList<StoreRawProduct>>> SearchDirectAsync(string query, CancellationToken cancellationToken = default)
     {
         return Task.FromResult(Result.Success<IReadOnlyList<StoreRawProduct>>(Array.Empty<StoreRawProduct>()));
+    }
+
+    protected async Task<Result<IReadOnlyList<StoreRawProduct>>> TryDirectHtmlScrapeAsync(
+        string searchUrl,
+        string cardRegex,
+        string urlGroup,
+        string titleGroup,
+        string priceGroup,
+        string query,
+        string idPrefix,
+        CancellationToken cancellationToken,
+        string? baseUrl = null)
+    {
+        var results = new List<StoreRawProduct>();
+        try
+        {
+            using var req = new HttpRequestMessage(HttpMethod.Get, searchUrl);
+            req.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36");
+            req.Headers.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+            req.Headers.Add("Accept-Language", "tr-TR,tr;q=0.9,en-US;q=0.8");
+
+            using var response = await HttpClient.SendAsync(req, cancellationToken);
+            if (response.StatusCode == System.Net.HttpStatusCode.Forbidden ||
+                response.StatusCode == (System.Net.HttpStatusCode)429 ||
+                response.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable)
+            {
+                TripDirectAccessCooldown(StoreSlug, TimeSpan.FromMinutes(30));
+                Logger.LogDebug("🛡️ Store '{StoreSlug}' returned HTTP {StatusCode}. Circuit breaker tripped for 30m; routing to aggregator.",
+                    StoreSlug, (int)response.StatusCode);
+                return Result.Success<IReadOnlyList<StoreRawProduct>>(results);
+            }
+
+            if (response.IsSuccessStatusCode)
+            {
+                var html = await response.Content.ReadAsStringAsync(cancellationToken);
+                var matches = Regex.Matches(html, cardRegex, RegexOptions.Singleline | RegexOptions.IgnoreCase);
+
+                foreach (Match m in matches)
+                {
+                    var title = m.Groups[titleGroup].Value.Trim();
+                    var urlPath = m.Groups[urlGroup].Value.Trim();
+                    var rawPrice = m.Groups[priceGroup].Value.Replace(".", "").Replace(",", ".").Replace("TL", "").Replace("₺", "").Trim();
+
+                    if (decimal.TryParse(rawPrice, NumberStyles.Any, CultureInfo.InvariantCulture, out var price) &&
+                        price >= 1500 && !IsAccessory(title) && MarketAggregator.IsModelMatch(query, title, urlPath))
+                    {
+                        var fullUrl = urlPath.StartsWith("http") ? urlPath : (baseUrl != null ? $"{baseUrl.TrimEnd('/')}{urlPath}" : urlPath);
+                        var (brand, model, ram, storage, color) = ParseTitle(title);
+                        results.Add(new StoreRawProduct(
+                            ExternalId: $"{idPrefix}-{Math.Abs((fullUrl + price).GetHashCode()):X8}",
+                            Title: title,
+                            Url: fullUrl,
+                            Price: price,
+                            SellerName: $"{StoreName} Doğrulanmış Mağaza",
+                            InStock: true,
+                            ImageUrl: null,
+                            Brand: brand,
+                            Model: model,
+                            RamGb: ram,
+                            StorageGb: storage,
+                            Color: color,
+                            RawJson: null
+                        ));
+                        break;
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "Direct scrape for store {StoreSlug} encountered exception, falling back to market aggregator", StoreSlug);
+        }
+
+        return Result.Success<IReadOnlyList<StoreRawProduct>>(results);
     }
 
     public static bool IsAccessory(string? title)
