@@ -163,12 +163,18 @@ public class ProductService : IProductService
     {
         if (string.IsNullOrWhiteSpace(slug)) return string.Empty;
         var clean = slug.Trim().ToLowerInvariant();
-        return SlugAliases.TryGetValue(clean, out var mapped) ? mapped : clean;
+        if (SlugAliases.TryGetValue(clean, out var mapped)) return mapped;
+
+        var noStorage = System.Text.RegularExpressions.Regex.Replace(clean, @"-(64|128|256|512|1024)gb$|-1tb$", "");
+        if (SlugAliases.TryGetValue(noStorage, out mapped)) return mapped;
+
+        return noStorage;
     }
 
     public async Task<Result<PhoneDto>> GetPhoneBySlugAsync(string slug, CancellationToken cancellationToken = default)
     {
         var canonicalSlug = ResolveCanonicalSlug(slug);
+        var isGuid = Guid.TryParse(slug, out var parsedGuid);
         var cacheKey = $"phone:{canonicalSlug}";
         var cached = await _cache.GetAsync<PhoneDto>(cacheKey, cancellationToken);
         if (cached != null) return Result.Success(cached);
@@ -183,7 +189,7 @@ public class ProductService : IProductService
                     .ThenInclude(o => o.Seller)
             .Include(p => p.Specifications)
             .AsNoTracking()
-            .FirstOrDefaultAsync(p => p.Slug == canonicalSlug || p.Slug == slug, cancellationToken);
+            .FirstOrDefaultAsync(p => (isGuid && p.Id == parsedGuid) || p.Slug == canonicalSlug || p.Slug == slug, cancellationToken);
 
         if (product == null)
         {
@@ -198,6 +204,7 @@ public class ProductService : IProductService
     public async Task<Result<IReadOnlyList<StorePriceDto>>> GetOffersByPhoneSlugAsync(string slug, CancellationToken cancellationToken = default)
     {
         var canonicalSlug = ResolveCanonicalSlug(slug);
+        var isGuid = Guid.TryParse(slug, out var parsedGuid);
         var product = await _context.Products
             .Include(p => p.Variants)
                 .ThenInclude(v => v.Offers)
@@ -206,7 +213,7 @@ public class ProductService : IProductService
                 .ThenInclude(v => v.Offers)
                     .ThenInclude(o => o.Seller)
             .AsNoTracking()
-            .FirstOrDefaultAsync(p => p.Slug == canonicalSlug || p.Slug == slug, cancellationToken);
+            .FirstOrDefaultAsync(p => (isGuid && p.Id == parsedGuid) || p.Slug == canonicalSlug || p.Slug == slug, cancellationToken);
 
         if (product == null)
         {
@@ -237,10 +244,11 @@ public class ProductService : IProductService
     public async Task<Result<IReadOnlyList<PriceHistoryDto>>> GetPriceHistoryByPhoneSlugAsync(string slug, CancellationToken cancellationToken = default)
     {
         var canonicalSlug = ResolveCanonicalSlug(slug);
+        var isGuid = Guid.TryParse(slug, out var parsedGuid);
         var product = await _context.Products
             .Include(p => p.Variants)
             .AsNoTracking()
-            .FirstOrDefaultAsync(p => p.Slug == canonicalSlug || p.Slug == slug, cancellationToken);
+            .FirstOrDefaultAsync(p => (isGuid && p.Id == parsedGuid) || p.Slug == canonicalSlug || p.Slug == slug, cancellationToken);
 
         if (product == null)
         {

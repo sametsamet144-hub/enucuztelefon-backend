@@ -82,7 +82,7 @@ public class ProductsController : BaseApiController
             new ProductFilterParams(Brand: current.Value.BrandSlug, PageSize: 5),
             cancellationToken);
 
-        var filtered = alternatives.Items.Where(p => p.Slug != slug).Take(4).ToList();
+        var filtered = alternatives.Items.Where(p => p.Id != current.Value.Id && p.Slug != current.Value.Slug).Take(4).ToList();
         return Ok(filtered);
     }
 }

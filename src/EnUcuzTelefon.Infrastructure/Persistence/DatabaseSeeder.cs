@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.Json;
 using EnUcuzTelefon.Domain.Entities;
 using EnUcuzTelefon.Domain.Enums;
+using EnUcuzTelefon.Infrastructure.Adapters;
 using EnUcuzTelefon.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -363,6 +364,12 @@ public static class DatabaseSeeder
                             var offerUrl = sp.TryGetProperty("url", out var uEl) && uEl.ValueKind == JsonValueKind.String
                                 ? uEl.GetString() ?? priceUrl
                                 : priceUrl;
+
+                            // Data yoksa yoktur: Sahte arama fallback linkleri offer olarak kaydedilmez
+                            if (!MarketAggregator.IsDirectProductUrl(offerUrl))
+                            {
+                                continue;
+                            }
                             var isAvail = !sp.TryGetProperty("isAvailable", out var iaEl) || iaEl.GetBoolean();
                             var shipTxt = sp.TryGetProperty("shippingText", out var shEl) && shEl.ValueKind == JsonValueKind.String
                                 ? shEl.GetString()
@@ -701,9 +708,9 @@ public static class DatabaseSeeder
                 variant.LowestPriceUrl = priceUrl;
             }
 
-            // Remove any existing offers belonging to stores not in AllowedStoreSlugs
+            // Remove any existing offers belonging to stores not in AllowedStoreSlugs or containing fake search URLs
             var invalidOffers = variant.Offers
-                .Where(o => o.Store == null || !AllowedStoreSlugs.Contains(o.Store.Slug))
+                .Where(o => o.Store == null || !AllowedStoreSlugs.Contains(o.Store.Slug) || !MarketAggregator.IsDirectProductUrl(o.Url))
                 .ToList();
             if (invalidOffers.Any())
             {
@@ -734,6 +741,12 @@ public static class DatabaseSeeder
                     var offerUrl = sp.TryGetProperty("url", out var uEl) && uEl.ValueKind == JsonValueKind.String
                         ? uEl.GetString() ?? priceUrl
                         : priceUrl;
+
+                    // Data yoksa yoktur: Sahte arama fallback linkleri offer olarak kaydedilmez
+                    if (!MarketAggregator.IsDirectProductUrl(offerUrl))
+                    {
+                        continue;
+                    }
 
                     if (existingOffersByStoreId.TryGetValue(storeObj.Id, out var existingOffer))
                     {

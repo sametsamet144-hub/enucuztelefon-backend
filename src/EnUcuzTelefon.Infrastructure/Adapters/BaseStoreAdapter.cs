@@ -113,8 +113,8 @@ public abstract class BaseStoreAdapter : IStoreAdapter
             Logger.LogDebug(ex, "Market aggregator threw for store {StoreSlug}, using calibrated fallback", StoreSlug);
         }
 
-        var fallback = CreateQueryFallbackProduct(query);
-        return Result.Success<IReadOnlyList<StoreRawProduct>>(new[] { fallback });
+        // Data yoksa yoktur: Mağazanın teklifi yoksa sahte arama linki veya uydurma fiyat üretilmez.
+        return Result.Success<IReadOnlyList<StoreRawProduct>>(Array.Empty<StoreRawProduct>());
     }
 
     protected virtual Task<Result<IReadOnlyList<StoreRawProduct>>> SearchDirectAsync(string query, CancellationToken cancellationToken = default)

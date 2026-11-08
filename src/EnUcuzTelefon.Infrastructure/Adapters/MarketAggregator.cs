@@ -215,33 +215,8 @@ public static class MarketAggregator
             )).ToList();
         }
 
-        // Fallback when this specific store has no direct offer:
-        // Always price strictly ABOVE the verified market baseline so synthetic fallback stores NEVER undercut real offers!
-        decimal baselinePrice = allOffers.Any()
-            ? allOffers.Min(o => o.Price)
-            : EstimateBasePrice(cleanQuery);
-
-        decimal storePrice = ApplyFallbackStoreMargin(baselinePrice, storeSlug, cleanQuery);
-        var searchUrl = BaseStoreAdapter.ResolveSafeStoreUrl(storeSlug, null, cleanQuery);
-
-        return new List<StoreRawProduct>
-        {
-            new(
-                ExternalId: $"{storeSlug.ToUpperInvariant()}-{Math.Abs((cleanQuery + storePrice).GetHashCode()):X8}",
-                Title: cleanQuery,
-                Url: searchUrl,
-                Price: storePrice,
-                SellerName: $"{storeName} Doğrulanmış Mağaza",
-                InStock: true,
-                ImageUrl: null,
-                Brand: null,
-                Model: null,
-                RamGb: 0,
-                StorageGb: 0,
-                Color: null,
-                RawJson: null
-            )
-        };
+        // Data yoksa yoktur: Mağazanın doğrulanmış gerçek teklifi yoksa sahte fallback fiyat/link üretilmez.
+        return Array.Empty<StoreRawProduct>();
     }
 
     public static async Task<IReadOnlyList<AggregatedMarketOffer>> FetchMarketOffersForQueryAsync(
