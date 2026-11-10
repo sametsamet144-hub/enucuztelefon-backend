@@ -69,3 +69,18 @@ public interface IStoreAdapterFactory
     IStoreAdapter GetAdapter(string storeSlug);
     IEnumerable<IStoreAdapter> GetAllAdapters();
 }
+
+public record AggregatedOfferItem(
+    string StoreSlug,
+    string StoreName,
+    string SellerName,
+    decimal Price,
+    string Url,
+    bool IsDirectProductUrl,
+    string? Title = null,
+    int StorageGb = 0);
+
+public interface IMarketOfferAggregator
+{
+    Task<IReadOnlyList<AggregatedOfferItem>> FetchOffersForQueryAsync(string query, string? knownSlug = null, CancellationToken cancellationToken = default);
+}

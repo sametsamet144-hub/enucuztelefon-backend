@@ -47,9 +47,30 @@ public static class MarketAggregator
         ["samsung-galaxy-s24-fe"] = "/cep-telefonu/en-ucuz-samsung-galaxy-s24-fe-fiyati,614642333.html",
         ["samsung-galaxy-s23-fe"] = "/cep-telefonu/en-ucuz-samsung-galaxy-s23-fe-256-gb-siyah-fiyati,313772219.html",
         ["samsung-galaxy-z-fold-6"] = "/cep-telefonu/en-ucuz-samsung-galaxy-z-fold-6-256-gb-fiyati,338129303.html",
+        ["samsung-galaxy-s24-plus"] = "/cep-telefonu/en-ucuz-samsung-galaxy-s24-plus-fiyati,176112818.html",
         ["samsung-galaxy-z-flip-6"] = "/cep-telefonu/en-ucuz-samsung-z-flip-6-256-gb-fiyati,488278224.html",
         ["samsung-galaxy-a56"] = "/cep-telefonu/en-ucuz-samsung-galaxy-a56-fiyati,786484511.html",
-        ["xiaomi-15"] = "/cep-telefonu/en-ucuz-xiaomi-15-fiyati,594091693.html"
+        ["samsung-galaxy-a55"] = "/cep-telefonu/en-ucuz-samsung-galaxy-a55-256-gb-fiyati,625151334.html",
+        ["samsung-galaxy-a35"] = "/cep-telefonu/en-ucuz-samsung-galaxy-a35-fiyati,520986539.html",
+        ["samsung-galaxy-a15"] = "/cep-telefonu/en-ucuz-samsung-galaxy-a15-fiyati,303631627.html",
+        ["samsung-galaxy-a25-5g"] = "/cep-telefonu/en-ucuz-samsung-galaxy-a25-fiyati,162020298.html",
+        ["xiaomi-15"] = "/cep-telefonu/en-ucuz-xiaomi-15-fiyati,594091693.html",
+        ["xiaomi-14"] = "/cep-telefonu/en-ucuz-xiaomi-14-fiyati,581037957.html",
+        ["xiaomi-14t-pro"] = "/cep-telefonu/en-ucuz-xiaomi-14t-pro-fiyati,773960099.html",
+        ["xiaomi-13-ultra"] = "/cep-telefonu/en-ucuz-xiaomi-13-ultra-fiyati,245942919.html",
+        ["poco-x6-pro"] = "/cep-telefonu/en-ucuz-poco-x6-pro-fiyati,362350710.html",
+        ["poco-f6-pro"] = "/cep-telefonu/en-ucuz-poco-f6-512-gb-12-gb-fiyati,624555296.html",
+        ["poco-m6-pro"] = "/cep-telefonu/en-ucuz-poco-m6-pro-4g-fiyati,488320849.html",
+        ["honor-200-pro"] = "/cep-telefonu/en-ucuz-honor-200-fiyati,651949932.html",
+        ["vivo-v30-5g"] = "/cep-telefonu/en-ucuz-vivo-v30-256-gb-siyah-fiyati,619377336.html",
+        ["vivo-v40-5g"] = "/cep-telefonu/en-ucuz-vivo-v40-256-gb-12-gb-titanyum-grisi-fiyati,798168348.html",
+        ["realme-gt-7-pro"] = "/cep-telefonu/en-ucuz-realme-gt-7-pro-fiyati,684475765.html",
+        ["realme-gt-6"] = "/cep-telefonu/en-ucuz-realme-gt-6-fiyati,628604155.html",
+        ["realme-12-pro-5g"] = "/cep-telefonu/en-ucuz-realme-12-pro-fiyati,469200959.html",
+        ["redmi-note-14-pro"] = "/cep-telefonu/en-ucuz-xiaomi-redmi-note-14-pro-fiyati,692136487.html",
+        ["redmi-note-13-pro-5g"] = "/cep-telefonu/en-ucuz-xiaomi-redmi-note-13-pro-plus-fiyati,252110494.html",
+        ["redmi-note-13-pro-5g-phone-038"] = "/cep-telefonu/en-ucuz-xiaomi-redmi-note-13-pro-fiyati,252110247.html",
+        ["redmi-note-13"] = "/cep-telefonu/en-ucuz-xiaomi-redmi-note-13-fiyati,252102941.html"
     };
 
     private static readonly HttpClient HttpClient = new(new SocketsHttpHandler
@@ -186,11 +207,11 @@ public static class MarketAggregator
         if (BaseStoreAdapter.IsAccessory(candidateTitle)) return false;
         if (IsRefurbishedOrUsed(candidateTitle, candidateUrl)) return false;
 
-        var q = Regex.Replace(query.ToLowerInvariant(), @"\(.*?\)", " ");
+        var q = Regex.Replace(query.ToLowerInvariant().Replace('-', ' '), @"\(.*?\)", " ");
         q = Regex.Replace(q, @"\b(64|128|256|512|1024)\s*gb\b|\b1\s*tb\b", " ");
         q = Regex.Replace(q, @"\s+", " ").Trim();
 
-        var c = candidateTitle.ToLowerInvariant().Replace("ui", "ul");
+        var c = candidateTitle.ToLowerInvariant().Replace("ui", "ul").Replace('-', ' ');
         c = Regex.Replace(c, @"\s+", " ").Trim();
 
         foreach (var tier in ModelTierKeywords)
@@ -238,7 +259,7 @@ public static class MarketAggregator
         }
 
         var cleanQuery = query.Trim();
-        var allOffers = await FetchMarketOffersForQueryAsync(cleanQuery, cancellationToken);
+        var allOffers = await FetchMarketOffersForQueryAsync(cleanQuery, null, cancellationToken);
 
         var matchingStoreOffers = allOffers
             .Where(o => o.StoreSlug.Equals(storeSlug, StringComparison.OrdinalIgnoreCase))
@@ -271,6 +292,7 @@ public static class MarketAggregator
 
     public static async Task<IReadOnlyList<AggregatedMarketOffer>> FetchMarketOffersForQueryAsync(
         string query,
+        string? knownSlug = null,
         CancellationToken cancellationToken = default)
     {
         var key = NormalizeLookupKey(query);
@@ -314,7 +336,8 @@ public static class MarketAggregator
         // 3. Live Akakçe Multi-Store Scrape (with rate-limiting semaphore so bursts never get blocked)
         try
         {
-            var akakceOffers = await ScrapeAkakceLiveAsync(query, seedEntry?.Slug, cancellationToken);
+            var effectiveSlug = !string.IsNullOrWhiteSpace(knownSlug) ? knownSlug : seedEntry?.Slug;
+            var akakceOffers = await ScrapeAkakceLiveAsync(query, effectiveSlug, cancellationToken);
             foreach (var ao in akakceOffers)
             {
                 if (!AllowedStoreSlugs.Contains(ao.StoreSlug))
@@ -423,33 +446,24 @@ public static class MarketAggregator
             }
 
             string? detailPath = null;
-            if (!string.IsNullOrWhiteSpace(knownSlug) && KnownAkakceUrls.TryGetValue(knownSlug, out var mappedPath))
+            var slugCandidate = !string.IsNullOrWhiteSpace(knownSlug)
+                ? knownSlug
+                : Regex.Replace(query.ToLowerInvariant().Trim(), @"[^a-z0-9]+", "-").Trim('-');
+
+            if (KnownAkakceUrls.TryGetValue(slugCandidate, out var mappedPath))
             {
                 detailPath = mappedPath;
             }
             else
             {
-                var cleanSearch = StripStorageSuffix(query);
-                var searchUrl = $"https://www.akakce.com/arama/?q={Uri.EscapeDataString(cleanSearch)}";
-                _lastAkakceRequestUtc = DateTime.UtcNow;
-                using var req = new HttpRequestMessage(HttpMethod.Get, searchUrl);
-                using var resp = await HttpClient.SendAsync(req, cancellationToken);
-                if (resp.IsSuccessStatusCode)
+                detailPath = await TryFindAkakceUrlViaAutocompleteAsync(query, cancellationToken);
+                if (string.IsNullOrWhiteSpace(detailPath))
                 {
-                    var searchHtml = await resp.Content.ReadAsStringAsync(cancellationToken);
-                    var prodMatches = Regex.Matches(
-                        searchHtml,
-                        @"&quot;name&quot;:\[0,&quot;(?<name>[^&]+)&quot;\],&quot;hasLogo&quot;:\[0,[a-z]+\],&quot;imageUrl&quot;:\[0,&quot;[^&]*&quot;\],&quot;url&quot;:\[0,&quot;(?<url>/cep-telefonu/[^&]+?\.html)&quot;\]");
-
-                    foreach (Match pm in prodMatches)
-                    {
-                        var candidateName = WebUtility.HtmlDecode(pm.Groups["name"].Value);
-                        if (IsModelMatch(query, candidateName))
-                        {
-                            detailPath = pm.Groups["url"].Value;
-                            break;
-                        }
-                    }
+                    detailPath = await TryFindAkakceUrlViaSearchAsync(query, 1, cancellationToken);
+                }
+                if (string.IsNullOrWhiteSpace(detailPath))
+                {
+                    detailPath = await TryFindAkakceUrlViaSearchAsync(query, 2, cancellationToken);
                 }
             }
 
@@ -486,7 +500,7 @@ public static class MarketAggregator
                             continue;
 
                         string? directUrl = null;
-                        if (resolvedRedirects < 2)
+                        if (resolvedRedirects < 8)
                         {
                             directUrl = await TryResolveAkakceDirectUrlAsync(
                                 mOffer.Groups["s"].Value,
@@ -503,18 +517,20 @@ public static class MarketAggregator
                             }
                         }
 
-                        var finalUrl = !string.IsNullOrWhiteSpace(directUrl)
-                            ? directUrl
-                            : BaseStoreAdapter.ResolveSafeStoreUrl(mappedSlug, null, rawTitle);
+                        if (string.IsNullOrWhiteSpace(directUrl))
+                            continue;
 
                         var displayName = GetStoreDisplayName(mappedSlug);
+                        var storageGb = BaseStoreAdapter.ExtractStorage(rawTitle);
                         results.Add(new AggregatedMarketOffer(
                             mappedSlug,
                             displayName,
                             $"{displayName} Doğrulanmış Satıcı",
                             Math.Round(price, 2),
-                            finalUrl,
-                            IsDirectProductUrl(finalUrl)));
+                            directUrl,
+                            true,
+                            rawTitle,
+                            storageGb));
                     }
                 }
             }
@@ -525,6 +541,83 @@ public static class MarketAggregator
         }
 
         return results;
+    }
+
+    private static async Task<string?> TryFindAkakceUrlViaAutocompleteAsync(string query, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var cleanSearch = StripStorageSuffix(query);
+            var url = $"https://api6.akakce.com/autocomplete?q={Uri.EscapeDataString(cleanSearch)}";
+            using var req = new HttpRequestMessage(HttpMethod.Get, url);
+            req.Headers.Add("Origin", "https://www.akakce.com");
+            req.Headers.Add("Referer", "https://www.akakce.com/");
+            using var resp = await HttpClient.SendAsync(req, cancellationToken);
+            if (!resp.IsSuccessStatusCode) return null;
+
+            var json = await resp.Content.ReadAsStringAsync(cancellationToken);
+            using var doc = JsonDocument.Parse(json);
+            if (doc.RootElement.TryGetProperty("result", out var resEl) &&
+                resEl.TryGetProperty("groups", out var groupsEl) &&
+                groupsEl.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var g in groupsEl.EnumerateArray())
+                {
+                    if (g.TryGetProperty("title", out var tEl) && tEl.GetString() == "Ürünler" &&
+                        g.TryGetProperty("items", out var itemsEl) && itemsEl.ValueKind == JsonValueKind.Array)
+                    {
+                        foreach (var it in itemsEl.EnumerateArray())
+                        {
+                            var text = it.TryGetProperty("text", out var textEl) ? textEl.GetString() : null;
+                            if (it.TryGetProperty("action", out var actEl) &&
+                                actEl.TryGetProperty("url", out var uEl))
+                            {
+                                var aUrl = uEl.GetString();
+                                if (!string.IsNullOrWhiteSpace(aUrl) && aUrl.StartsWith("/cep-telefonu/") &&
+                                    (string.IsNullOrWhiteSpace(text) || IsModelMatch(query, text)))
+                                {
+                                    return aUrl;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        catch { /* ignore */ }
+        return null;
+    }
+
+    private static async Task<string?> TryFindAkakceUrlViaSearchAsync(string query, int page, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var cleanSearch = StripStorageSuffix(query);
+            var searchUrl = page > 1
+                ? $"https://www.akakce.com/arama/?q={Uri.EscapeDataString(cleanSearch)}&p={page}"
+                : $"https://www.akakce.com/arama/?q={Uri.EscapeDataString(cleanSearch)}";
+
+            _lastAkakceRequestUtc = DateTime.UtcNow;
+            using var req = new HttpRequestMessage(HttpMethod.Get, searchUrl);
+            using var resp = await HttpClient.SendAsync(req, cancellationToken);
+            if (!resp.IsSuccessStatusCode) return null;
+
+            var searchHtml = await resp.Content.ReadAsStringAsync(cancellationToken);
+            var prodMatches = Regex.Matches(
+                searchHtml,
+                @"&quot;name&quot;:\[0,&quot;(?<name>[^&]+)&quot;\],&quot;hasLogo&quot;:\[0,[a-z]+\],&quot;imageUrl&quot;:\[0,&quot;[^&]*&quot;\],&quot;url&quot;:\[0,&quot;(?<url>/cep-telefonu/[^&]+?\.html)&quot;\]");
+
+            foreach (Match pm in prodMatches)
+            {
+                var candidateName = WebUtility.HtmlDecode(pm.Groups["name"].Value);
+                if (IsModelMatch(query, candidateName))
+                {
+                    return pm.Groups["url"].Value;
+                }
+            }
+        }
+        catch { /* ignore */ }
+        return null;
     }
 
     private static async Task<string?> TryResolveAkakceDirectUrlAsync(
@@ -557,18 +650,56 @@ public static class MarketAggregator
             var m = Regex.Match(html, @"window\.location\.replace\('(?<u1>[^']+)'\)");
             if (!m.Success)
             {
+                m = Regex.Match(html, @"<meta\s+http-equiv=""refresh""\s+content=""\d+;\s*url=(?<u1>[^"">]+)""", RegexOptions.IgnoreCase);
+            }
+            if (!m.Success)
+            {
                 m = Regex.Match(html, @"url=(?<u1>https?://[^""']+)");
             }
 
             if (m.Success)
             {
-                var cleanUrl = Regex.Replace(m.Groups["u1"].Value, @"[?&](utm_source|wt_pc|adj_t|tag|linkCode)=.*$", "");
+                var rawUrl = WebUtility.HtmlDecode(m.Groups["u1"].Value);
+                var cleanUrl = CleanResolvedUrl(rawUrl);
                 return cleanUrl;
             }
         }
         catch { /* ignore redirect failure */ }
 
         return null;
+    }
+
+    public static string CleanResolvedUrl(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return url;
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)) return url;
+
+        var query = uri.Query;
+        if (string.IsNullOrEmpty(query)) return url;
+
+        var trackingKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term",
+            "wt_pc", "adj_t", "adj_campaign", "adjust_tracker", "adjust_campaign",
+            "mwebtoapp", "tag", "linkCode", "v", "vi", "vd", "yz", "sig", "exp"
+        };
+
+        var qParams = System.Web.HttpUtility.ParseQueryString(query);
+        var filtered = new List<string>();
+        foreach (string? key in qParams.AllKeys)
+        {
+            if (key != null && !trackingKeys.Contains(key))
+            {
+                var val = qParams[key];
+                if (!string.IsNullOrEmpty(val))
+                {
+                    filtered.Add($"{Uri.EscapeDataString(key)}={Uri.EscapeDataString(val)}");
+                }
+            }
+        }
+
+        var newQuery = filtered.Count > 0 ? "?" + string.Join("&", filtered) : "";
+        return $"{uri.Scheme}://{uri.Authority}{uri.AbsolutePath}{newQuery}";
     }
 
     public static string MapStoreSlug(string sellerName, string url)

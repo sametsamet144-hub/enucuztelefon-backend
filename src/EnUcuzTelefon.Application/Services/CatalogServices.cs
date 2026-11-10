@@ -12,7 +12,7 @@ public static class OfferTrust
 {
     /// <summary>Doğrulanmamış teklif yayınlanmaz. Geçiş döneminde false yapılabilir, kalıcı olarak true olmalı.</summary>
     public static bool RequireVerified = false;
-    public static readonly TimeSpan MaxAge = TimeSpan.FromHours(72);
+    public static readonly TimeSpan MaxAge = TimeSpan.FromHours(168);
 
     private static readonly HashSet<string> DisallowedStoreSlugs = new(StringComparer.OrdinalIgnoreCase)
     { "bim", "a101", "sok", "evkur", "yonavm", "mutluevim", "arcelik", "beko", "vestel" };
@@ -45,7 +45,11 @@ public static class OfferTrust
             u.Contains("/s?k=") || u.Contains("?text=") || u.Contains("/search?") ||
             u.Contains("/list/?search_text=") || u.Contains("/kategori/") ||
             u.Contains("aktuel-urunler") || u.Contains("/faturaya-ek/telefonlar") ||
-            u.Contains("/bireysel.turktelekom.com.tr/cihazlar"))
+            u.Contains("/bireysel.turktelekom.com.tr/cihazlar") ||
+            u.EndsWith("mi.com/tr/phone") || u.EndsWith("mi.com/tr/phone/") ||
+            u.EndsWith("apple.com/tr/iphone") || u.EndsWith("apple.com/tr/iphone/") ||
+            u.EndsWith("samsung.com/tr") || u.EndsWith("samsung.com/tr/") ||
+            u.Contains("/mobil/cep-telefonu") || u.EndsWith("/phones") || u.EndsWith("/phones/"))
         {
             return false;
         }
@@ -108,12 +112,18 @@ public class ProductService : IProductService
     private readonly IApplicationDbContext _context;
     private readonly ICacheService _cache;
     private readonly ILogger<ProductService> _logger;
+    private readonly IMarketOfferAggregator? _marketAggregator;
 
-    public ProductService(IApplicationDbContext context, ICacheService cache, ILogger<ProductService> logger)
+    public ProductService(
+        IApplicationDbContext context,
+        ICacheService cache,
+        ILogger<ProductService> logger,
+        IMarketOfferAggregator? marketAggregator = null)
     {
         _context = context;
         _cache = cache;
         _logger = logger;
+        _marketAggregator = marketAggregator;
     }
 
     public async Task<PagedResult<PhoneDto>> GetPhonesAsync(ProductFilterParams filter, CancellationToken cancellationToken = default)
@@ -262,9 +272,139 @@ public class ProductService : IProductService
             return Result.Failure<PhoneDto>(Error.NotFound("Product.NotFound", $"Phone with slug '{slug}' was not found."));
         }
 
+        var (_, existingOffers) = SelectVariantOffers(product, null, DateTime.UtcNow);
+        if (existingOffers.Count <= 1 && _marketAggregator != null)
+        {
+            var enriched = await TryEnrichProductOffersAsync(product.Id, product.Name, product.Brand?.Name, product.Slug, cancellationToken);
+            if (enriched)
+            {
+                product = await _context.Products
+                    .Include(p => p.Brand)
+                    .Include(p => p.Variants)
+                        .ThenInclude(v => v.Offers)
+                            .ThenInclude(o => o.Store)
+                    .Include(p => p.Variants)
+                        .ThenInclude(v => v.Offers)
+                            .ThenInclude(o => o.Seller)
+                    .Include(p => p.Specifications)
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(p => (isGuid && p.Id == parsedGuid) || p.Slug == canonicalSlug || p.Slug == slug, cancellationToken);
+
+                if (product == null)
+                {
+                    return Result.Failure<PhoneDto>(Error.NotFound("Product.NotFound", $"Phone with slug '{slug}' was not found."));
+                }
+            }
+        }
+
         var dto = MapToPhoneDto(product);
         await _cache.SetAsync(cacheKey, dto, TimeSpan.FromMinutes(15), cancellationToken);
         return Result.Success(dto);
+    }
+
+    private async Task<bool> TryEnrichProductOffersAsync(Guid productId, string productName, string? brandName, string? productSlug, CancellationToken cancellationToken)
+    {
+        if (_marketAggregator == null) return false;
+
+        try
+        {
+            var brand = brandName ?? "";
+            var searchQuery = !string.IsNullOrWhiteSpace(brand) && productName.StartsWith(brand, StringComparison.OrdinalIgnoreCase)
+                ? productName
+                : $"{brand} {productName}".Trim();
+
+            var liveOffers = await _marketAggregator.FetchOffersForQueryAsync(searchQuery, productSlug, cancellationToken);
+            if (liveOffers == null || liveOffers.Count == 0) return false;
+
+            var trackedProduct = await _context.Products
+                .Include(p => p.Variants)
+                    .ThenInclude(v => v.Offers)
+                .FirstOrDefaultAsync(p => p.Id == productId, cancellationToken);
+
+            if (trackedProduct == null || !trackedProduct.Variants.Any()) return false;
+
+            var stores = await _context.Stores.Where(s => s.IsActive).ToListAsync(cancellationToken);
+            var storeBySlug = stores.ToDictionary(s => s.Slug, s => s, StringComparer.OrdinalIgnoreCase);
+
+            var defaultVariant = trackedProduct.Variants.OrderBy(v => v.StorageGb).First();
+            bool hasChanges = false;
+
+            foreach (var item in liveOffers)
+            {
+                if (!item.IsDirectProductUrl || item.Price < 1000) continue;
+                if (!storeBySlug.TryGetValue(item.StoreSlug, out var store)) continue;
+                if (OfferTrust.LooksGenerated(item.Url)) continue;
+
+                var targetVariant = (item.StorageGb > 0
+                    ? trackedProduct.Variants.FirstOrDefault(v => v.StorageGb == item.StorageGb)
+                    : null) ?? defaultVariant;
+
+                var existing = targetVariant.Offers.FirstOrDefault(o => o.StoreId == store.Id);
+                if (existing == null)
+                {
+                    var newOffer = new Offer
+                    {
+                        VariantId = targetVariant.Id,
+                        StoreId = store.Id,
+                        Price = item.Price,
+                        ShippingCost = 0,
+                        TotalCost = item.Price,
+                        Currency = "TRY",
+                        Url = item.Url,
+                        IsAvailable = true,
+                        IsVerified = true,
+                        LastCheckedAt = DateTime.UtcNow,
+                        CreatedAt = DateTime.UtcNow,
+                        ShippingText = "Ücretsiz Kargo",
+                        GuaranteeText = "2 Yıl Distribütör Garantili",
+                        InstallmentText = "Peşin Fiyatına 3 Taksit",
+                        IsOfficial = false
+                    };
+                    _context.Offers.Add(newOffer);
+                    targetVariant.Offers.Add(newOffer);
+                    hasChanges = true;
+                }
+                else
+                {
+                    existing.Price = item.Price;
+                    existing.TotalCost = item.Price + existing.ShippingCost;
+                    existing.Url = item.Url;
+                    existing.IsAvailable = true;
+                    existing.IsVerified = true;
+                    existing.LastCheckedAt = DateTime.UtcNow;
+                    existing.UpdatedAt = DateTime.UtcNow;
+                    hasChanges = true;
+                }
+            }
+
+            if (hasChanges)
+            {
+                foreach (var v in trackedProduct.Variants)
+                {
+                    var validOffers = v.Offers.Where(o => OfferTrust.IsTrusted(o, DateTime.UtcNow)).OrderBy(o => o.Price).ToList();
+                    if (validOffers.Count > 0)
+                    {
+                        v.LowestPrice = validOffers.First().Price;
+                        v.HighestPrice = validOffers.Last().Price;
+                        v.LowestPriceStoreName = validOffers.First().Store?.Name ?? "";
+                        v.LowestPriceUrl = validOffers.First().Url;
+                    }
+                }
+
+                await _context.SaveChangesAsync(cancellationToken);
+                await _cache.RemoveAsync($"phone:{trackedProduct.Slug}", cancellationToken);
+                await _cache.RemoveByPrefixAsync("phone:offers:", cancellationToken);
+                await _cache.RemoveByPrefixAsync("phone:prices:", cancellationToken);
+                await _cache.RemoveByPrefixAsync("products:", cancellationToken);
+                return true;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to enrich offers on-demand for product ID {ProductId}", productId);
+        }
+
+        return false;
     }
 
     private static (ProductVariant? Variant, List<Offer> Offers) SelectVariantOffers(Product p, int? storageGb, DateTime nowUtc)
@@ -314,6 +454,28 @@ public class ProductService : IProductService
         }
 
         var (_, offers) = SelectVariantOffers(product, storage, DateTime.UtcNow);
+        if (offers.Count <= 1 && _marketAggregator != null)
+        {
+            var enriched = await TryEnrichProductOffersAsync(product.Id, product.Name, product.Brand?.Name, product.Slug, cancellationToken);
+            if (enriched)
+            {
+                product = await _context.Products
+                    .Include(p => p.Brand)
+                    .Include(p => p.Variants)
+                        .ThenInclude(v => v.Offers)
+                            .ThenInclude(o => o.Store)
+                    .Include(p => p.Variants)
+                        .ThenInclude(v => v.Offers)
+                            .ThenInclude(o => o.Seller)
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(p => (isGuid && p.Id == parsedGuid) || p.Slug == canonicalSlug || p.Slug == slug, cancellationToken);
+
+                if (product != null)
+                {
+                    (_, offers) = SelectVariantOffers(product, storage, DateTime.UtcNow);
+                }
+            }
+        }
 
         var dtos = offers.Select(o => new StorePriceDto(
             Store: o.Store!.Name,
@@ -358,6 +520,28 @@ public class ProductService : IProductService
         }
 
         var (_, offers) = SelectVariantOffers(product, storage, DateTime.UtcNow);
+        if (offers.Count <= 1 && _marketAggregator != null)
+        {
+            var enriched = await TryEnrichProductOffersAsync(product.Id, product.Name, product.Brand?.Name, product.Slug, cancellationToken);
+            if (enriched)
+            {
+                product = await _context.Products
+                    .Include(p => p.Brand)
+                    .Include(p => p.Variants)
+                        .ThenInclude(v => v.Offers)
+                            .ThenInclude(o => o.Store)
+                    .Include(p => p.Variants)
+                        .ThenInclude(v => v.Offers)
+                            .ThenInclude(o => o.Seller)
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(p => (isGuid && p.Id == parsedGuid) || p.Slug == canonicalSlug || p.Slug == idOrSlug, cancellationToken);
+
+                if (product != null)
+                {
+                    (_, offers) = SelectVariantOffers(product, storage, DateTime.UtcNow);
+                }
+            }
+        }
 
         var storePrices = offers.Select(o => new StorePriceDto(
             Store: o.Store!.Name,

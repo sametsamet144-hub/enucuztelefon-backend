@@ -36,6 +36,24 @@ public class ScrapingBackgroundWorker : BackgroundService
                 var adapterFactory = scope.ServiceProvider.GetRequiredService<IStoreAdapterFactory>();
                 var cache = scope.ServiceProvider.GetRequiredService<ICacheService>();
 
+                // Auto-recover stale stuck running jobs older than 15 minutes
+                var staleCutoff = DateTime.UtcNow.AddMinutes(-15);
+                var staleJobs = await db.ScrapingJobs
+                    .Where(j => j.Status == JobStatus.Running && j.StartedAt < staleCutoff)
+                    .ToListAsync(stoppingToken);
+
+                if (staleJobs.Any())
+                {
+                    foreach (var sj in staleJobs)
+                    {
+                        sj.Status = JobStatus.Failed;
+                        sj.ErrorMessage = "Auto-aborted: job timed out after 15 minutes without progress";
+                        sj.CompletedAt = DateTime.UtcNow;
+                    }
+                    await db.SaveChangesAsync(stoppingToken);
+                    _logger.LogWarning("⚠️ Auto-recovered {Count} stale stuck scraping jobs.", staleJobs.Count);
+                }
+
                 // 1. Check for pending scraping jobs
                 var pendingJob = await db.ScrapingJobs
                     .Include(j => j.Store)

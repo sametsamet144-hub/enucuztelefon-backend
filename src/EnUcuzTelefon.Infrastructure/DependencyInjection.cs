@@ -112,6 +112,7 @@ public static class DependencyInjection
         services.AddScoped<IProductMatchingEngine, ProductMatchingEngine>();
         services.AddScoped<IPriceVerificationService, PriceVerificationService>();
         services.AddScoped<IPriceAlertNotifier, PriceAlertNotifier>();
+        services.AddSingleton<IMarketOfferAggregator, MarketOfferAggregatorService>();
 
         // 7. Application Services
         services.AddScoped<IProductService, ProductService>();
