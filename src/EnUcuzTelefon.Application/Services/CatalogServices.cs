@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using EnUcuzTelefon.Application.DTOs;
 using EnUcuzTelefon.Application.Interfaces;
 using EnUcuzTelefon.Domain.Entities;
@@ -7,11 +8,76 @@ using Microsoft.Extensions.Logging;
 
 namespace EnUcuzTelefon.Application.Services;
 
+public static class OfferTrust
+{
+    /// <summary>Doğrulanmamış teklif yayınlanmaz. Geçiş döneminde false yapılabilir, kalıcı olarak true olmalı.</summary>
+    public static bool RequireVerified = false;
+    public static readonly TimeSpan MaxAge = TimeSpan.FromHours(72);
+
+    private static readonly HashSet<string> DisallowedStoreSlugs = new(StringComparer.OrdinalIgnoreCase)
+    { "bim", "a101", "sok", "evkur", "yonavm", "mutluevim", "arcelik", "beko", "vestel" };
+
+    // Seed/üretici tarafından uydurulmuş linklerin ayırt edici izleri:
+    private static readonly Regex AmazonHexAsin   = new(@"/dp/B0[0-9A-F]{8}(?=$|[/?])", RegexOptions.Compiled);
+    private static readonly Regex PttNineDigit    = new(@"-p-\d{9}(?=$|[/?])", RegexOptions.Compiled);
+    private static readonly Regex CiceksepetiFake = new(@"-kc\d{8,10}(?=$|[/?])", RegexOptions.Compiled);
+    private static readonly Regex TrendyolFake    = new(@"[?&]merchantId=9\d{2}(?=$|&)", RegexOptions.Compiled);
+    private static readonly Regex TeknosaFake     = new(@"-p-(?!1250)\d{9}(?=$|[/?])", RegexOptions.Compiled);
+
+    public static bool LooksGenerated(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return true;
+        return AmazonHexAsin.IsMatch(url)
+            || (url.Contains("pttavm.com") && PttNineDigit.IsMatch(url))
+            || (url.Contains("ciceksepeti.com") && CiceksepetiFake.IsMatch(url))
+            || (url.Contains("trendyol.com") && TrendyolFake.IsMatch(url))
+            || (url.Contains("teknosa.com") && TeknosaFake.IsMatch(url))
+            || (url.Contains("n11.com") && url.Contains("magaza=n11") && !url.Contains("renk="))
+            || url.Contains("vodafone.com.tr")
+            || url.Contains("turktelekom.com.tr");
+    }
+
+    public static bool IsDirectProductUrl(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return false;
+        var u = url.ToLowerInvariant();
+        if (u.Contains("/sr?q=") || u.Contains("/ara?q=") || u.Contains("/arama?") ||
+            u.Contains("/s?k=") || u.Contains("?text=") || u.Contains("/search?") ||
+            u.Contains("/list/?search_text=") || u.Contains("/kategori/") ||
+            u.Contains("aktuel-urunler") || u.Contains("/faturaya-ek/telefonlar") ||
+            u.Contains("/bireysel.turktelekom.com.tr/cihazlar"))
+        {
+            return false;
+        }
+        return true;
+    }
+
+    public static bool IsTrusted(Offer? o, DateTime nowUtc)
+    {
+        if (o == null || !o.IsAvailable || o.Price <= 0 || o.Store == null) return false;
+        if (DisallowedStoreSlugs.Contains(o.Store.Slug)) return false;
+        if (!IsDirectProductUrl(o.Url)) return false;
+        if (LooksGenerated(o.Url)) return false;
+        if (RequireVerified && (!o.IsVerified || nowUtc - o.LastCheckedAt > MaxAge)) return false;
+        return true;
+    }
+
+    /// <summary>Medyandan çok sapan uç fiyatları (239.999 TL Xiaomi 15, 34.999 TL iPhone 15 Pro...) eler.</summary>
+    public static List<Offer> RemoveOutliers(List<Offer> offers, decimal low = 0.60m, decimal high = 1.60m)
+    {
+        if (offers.Count < 3) return offers;
+        var prices = offers.Select(o => o.Price).OrderBy(x => x).ToList();
+        var median = prices[prices.Count / 2];
+        return offers.Where(o => o.Price >= median * low && o.Price <= median * high).ToList();
+    }
+}
+
 public interface IProductService
 {
     Task<PagedResult<PhoneDto>> GetPhonesAsync(ProductFilterParams filter, CancellationToken cancellationToken = default);
     Task<Result<PhoneDto>> GetPhoneBySlugAsync(string slug, CancellationToken cancellationToken = default);
-    Task<Result<IReadOnlyList<StorePriceDto>>> GetOffersByPhoneSlugAsync(string slug, CancellationToken cancellationToken = default);
+    Task<Result<IReadOnlyList<StorePriceDto>>> GetOffersByPhoneSlugAsync(string slug, int? storage = null, CancellationToken cancellationToken = default);
+    Task<Result<ProductPricesResponseDto>> GetPricesByPhoneIdAsync(string idOrSlug, int? storage = null, CancellationToken cancellationToken = default);
     Task<Result<IReadOnlyList<PriceHistoryDto>>> GetPriceHistoryByPhoneSlugAsync(string slug, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<PhoneDto>> GetDealsAsync(int limit = 6, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<PhoneDto>> GetCheapestAsync(int limit = 6, CancellationToken cancellationToken = default);
@@ -129,7 +195,7 @@ public class ProductService : IProductService
             .Take(pageSize)
             .ToListAsync(cancellationToken);
 
-        var dtos = products.Select(MapToPhoneDto).ToList();
+        var dtos = products.Select(p => MapToPhoneDto(p)).ToList();
         var result = new PagedResult<PhoneDto>(dtos, totalCount, page, pageSize);
 
         await _cache.SetAsync(cacheKey, result, TimeSpan.FromMinutes(10), cancellationToken);
@@ -201,63 +267,37 @@ public class ProductService : IProductService
         return Result.Success(dto);
     }
 
-    private static readonly HashSet<string> DisallowedStoreSlugs = new(StringComparer.OrdinalIgnoreCase)
+    private static (ProductVariant? Variant, List<Offer> Offers) SelectVariantOffers(Product p, int? storageGb, DateTime nowUtc)
     {
-        "bim", "a101", "sok", "evkur", "yonavm", "mutluevim", "arcelik", "beko", "vestel"
-    };
+        var variants = p.Variants.AsEnumerable();
+        if (storageGb is > 0) variants = variants.Where(v => v.StorageGb == storageGb);
 
-    private static bool IsRealDirectOffer(Offer o)
-    {
-        if (o == null || !o.IsAvailable || o.Price <= 0 || o.Store == null) return false;
-        if (DisallowedStoreSlugs.Contains(o.Store.Slug)) return false;
-        if (string.IsNullOrWhiteSpace(o.Url)) return false;
+        var candidates = variants
+            .Select(v => (Variant: v, Offers: BestPerStore(OfferTrust.RemoveOutliers(
+                v.Offers.Where(o => OfferTrust.IsTrusted(o, nowUtc)).ToList()))))
+            .Where(x => x.Offers.Count > 0)
+            .ToList();
 
-        var u = o.Url.ToLowerInvariant();
-        if (u.Contains("/arama") ||
-            u.Contains("/ara?") ||
-            u.Contains("/ara/") ||
-            u.Contains("/sr?q=") ||
-            u.Contains("/sr?") ||
-            u.Contains("/sr/") ||
-            u.Contains("/s?k=") ||
-            u.Contains("/s?") ||
-            u.Contains("search_text=") ||
-            u.Contains("search.html") ||
-            u.Contains("?query=") ||
-            u.Contains("&query=") ||
-            u.Contains("?text=") ||
-            u.Contains("&text=") ||
-            u.Contains("?q=") ||
-            u.Contains("&q=") ||
-            u.Contains("/categories/") ||
-            u.Contains("/kategori/") ||
-            u.Contains("/katalog/") ||
-            u.Contains("/kampanyalar/") ||
-            u.Contains("/faturaya-ek") ||
-            u.Contains("/cihazlar") ||
-            u.Contains("/mobil/cep-telefonu") ||
-            u.Contains("placeholder") ||
-            u.Contains("-10000000") ||
-            u.Contains("hbc0000100000") ||
-            u.Contains("myepoint.com") ||
-            u.Contains("enucuztelefon.com"))
-        {
-            return false;
-        }
+        if (candidates.Count == 0) return (null, new List<Offer>());
 
-        if (u.EndsWith("apple.com/tr/iphone") || u.EndsWith("apple.com/tr/iphone/") ||
-            u.EndsWith("shop.samsung.com/tr") || u.EndsWith("shop.samsung.com/tr/"))
-        {
-            return false;
-        }
-
-        return true;
+        // En çok mağazası olan varyant; eşitlikte en düşük depolama (giriş fiyatı)
+        var best = candidates.OrderByDescending(x => x.Offers.Count).ThenBy(x => x.Variant.StorageGb).First();
+        return (best.Variant, best.Offers.OrderBy(o => o.Price).ToList());
     }
 
-    public async Task<Result<IReadOnlyList<StorePriceDto>>> GetOffersByPhoneSlugAsync(string slug, CancellationToken cancellationToken = default)
+    private static List<Offer> BestPerStore(List<Offer> offers) =>
+        offers.GroupBy(o => o.Store!.Slug, StringComparer.OrdinalIgnoreCase)
+              .Select(g => g.OrderBy(o => o.Price).First())
+              .ToList();
+
+    public async Task<Result<IReadOnlyList<StorePriceDto>>> GetOffersByPhoneSlugAsync(string slug, int? storage = null, CancellationToken cancellationToken = default)
     {
         var canonicalSlug = ResolveCanonicalSlug(slug);
         var isGuid = Guid.TryParse(slug, out var parsedGuid);
+        var cacheKey = $"phone:offers:{canonicalSlug}:{storage ?? 0}";
+        var cached = await _cache.GetAsync<IReadOnlyList<StorePriceDto>>(cacheKey, cancellationToken);
+        if (cached != null) return Result.Success(cached);
+
         var product = await _context.Products
             .Include(p => p.Variants)
                 .ThenInclude(v => v.Offers)
@@ -273,26 +313,81 @@ public class ProductService : IProductService
             return Result.Failure<IReadOnlyList<StorePriceDto>>(Error.NotFound("Product.NotFound", $"Phone with slug '{slug}' was not found."));
         }
 
-        var offers = product.Variants
-            .SelectMany(v => v.Offers)
-            .Where(IsRealDirectOffer)
-            .OrderBy(o => o.Price)
-            .Select(o => new StorePriceDto(
-                Store: o.Store.Name,
-                StoreSlug: o.Store.Slug,
-                SellerName: o.Seller?.Name ?? o.Store.Name,
-                SellerRating: o.Seller?.Rating ?? o.Store.ReliabilityScore,
-                Price: o.Price,
-                Url: o.Url,
-                IsAvailable: o.IsAvailable,
-                LastUpdated: o.LastCheckedAt.ToString("o"),
-                ShippingText: o.ShippingText,
-                GuaranteeText: o.GuaranteeText,
-                InstallmentText: o.InstallmentText,
-                IsOfficial: o.IsOfficial))
-            .ToList();
+        var (_, offers) = SelectVariantOffers(product, storage, DateTime.UtcNow);
 
-        return Result.Success<IReadOnlyList<StorePriceDto>>(offers);
+        var dtos = offers.Select(o => new StorePriceDto(
+            Store: o.Store!.Name,
+            StoreSlug: o.Store.Slug,
+            SellerName: o.Seller?.Name ?? o.Store.Name,
+            SellerRating: o.Seller?.Rating ?? o.Store.ReliabilityScore,
+            Price: o.Price,
+            Url: o.Url,
+            IsAvailable: o.IsAvailable,
+            LastUpdated: o.LastCheckedAt.ToString("o"),
+            ShippingText: o.ShippingText,
+            GuaranteeText: o.GuaranteeText,
+            InstallmentText: o.InstallmentText,
+            IsOfficial: o.IsOfficial))
+        .ToList();
+
+        await _cache.SetAsync(cacheKey, dtos, TimeSpan.FromMinutes(10), cancellationToken);
+        return Result.Success<IReadOnlyList<StorePriceDto>>(dtos);
+    }
+
+    public async Task<Result<ProductPricesResponseDto>> GetPricesByPhoneIdAsync(string idOrSlug, int? storage = null, CancellationToken cancellationToken = default)
+    {
+        var canonicalSlug = ResolveCanonicalSlug(idOrSlug);
+        var isGuid = Guid.TryParse(idOrSlug, out var parsedGuid);
+        var cacheKey = $"phone:prices:{canonicalSlug}:{storage ?? 0}";
+        var cached = await _cache.GetAsync<ProductPricesResponseDto>(cacheKey, cancellationToken);
+        if (cached != null) return Result.Success(cached);
+
+        var product = await _context.Products
+            .Include(p => p.Variants)
+                .ThenInclude(v => v.Offers)
+                    .ThenInclude(o => o.Store)
+            .Include(p => p.Variants)
+                .ThenInclude(v => v.Offers)
+                    .ThenInclude(o => o.Seller)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => (isGuid && p.Id == parsedGuid) || p.Slug == canonicalSlug || p.Slug == idOrSlug, cancellationToken);
+
+        if (product == null)
+        {
+            return Result.Failure<ProductPricesResponseDto>(Error.NotFound("Product.NotFound", $"Phone '{idOrSlug}' was not found."));
+        }
+
+        var (_, offers) = SelectVariantOffers(product, storage, DateTime.UtcNow);
+
+        var storePrices = offers.Select(o => new StorePriceDto(
+            Store: o.Store!.Name,
+            StoreSlug: o.Store.Slug,
+            SellerName: o.Seller?.Name ?? o.Store.Name,
+            SellerRating: o.Seller?.Rating ?? o.Store.ReliabilityScore,
+            Price: o.Price,
+            Url: o.Url,
+            IsAvailable: o.IsAvailable,
+            LastUpdated: o.LastCheckedAt.ToString("o"),
+            ShippingText: o.ShippingText,
+            GuaranteeText: o.GuaranteeText,
+            InstallmentText: o.InstallmentText,
+            IsOfficial: o.IsOfficial))
+        .ToList();
+
+        decimal lowestPrice = storePrices.Count > 0 ? storePrices.Min(s => s.Price) : 0m;
+        decimal highestPrice = storePrices.Count > 0 ? storePrices.Max(s => s.Price) : 0m;
+
+        var response = new ProductPricesResponseDto(
+            Id: product.Id.ToString(),
+            PhoneSlug: product.Slug,
+            LowestPrice: lowestPrice,
+            HighestPrice: highestPrice,
+            TotalStores: storePrices.Count,
+            StorePrices: storePrices,
+            LastUpdated: DateTime.UtcNow.ToString("o"));
+
+        await _cache.SetAsync(cacheKey, response, TimeSpan.FromMinutes(10), cancellationToken);
+        return Result.Success(response);
     }
 
     public async Task<Result<IReadOnlyList<PriceHistoryDto>>> GetPriceHistoryByPhoneSlugAsync(string slug, CancellationToken cancellationToken = default)
@@ -334,17 +429,19 @@ public class ProductService : IProductService
 
         var products = await _context.Products
             .Include(p => p.Brand)
-            .Include(p => p.Variants)
-                .ThenInclude(v => v.Offers)
-                    .ThenInclude(o => o.Store)
+            .Include(p => p.Variants).ThenInclude(v => v.Offers).ThenInclude(o => o.Store)
+            .Include(p => p.Variants).ThenInclude(v => v.Offers).ThenInclude(o => o.Seller)
             .Include(p => p.Specifications)
-            .Where(p => p.IsActive && p.Variants.Any(v => v.Offers.Any(o => o.IsAvailable && o.Price > 0) && v.IsPriceDropped && v.PriceDropPercent >= 2))
-            .OrderByDescending(p => p.Variants.Max(v => v.PriceDropPercent))
-            .Take(limit)
+            .Where(p => p.IsActive)
             .AsNoTracking()
             .ToListAsync(cancellationToken);
 
-        var dtos = products.Select(MapToPhoneDto).ToList();
+        var dtos = products.Select(p => MapToPhoneDto(p))
+                           .Where(d => d.LowestPrice > 0 && d.IsPriceDropped && d.PriceDropPercent > 0)
+                           .OrderByDescending(d => d.PriceDropPercent)
+                           .Take(limit)
+                           .ToList();
+
         await _cache.SetAsync(cacheKey, dtos, TimeSpan.FromMinutes(10), cancellationToken);
         return dtos;
     }
@@ -353,26 +450,39 @@ public class ProductService : IProductService
     {
         var products = await _context.Products
             .Include(p => p.Brand)
-            .Include(p => p.Variants)
-                .ThenInclude(v => v.Offers)
-                    .ThenInclude(o => o.Store)
+            .Include(p => p.Variants).ThenInclude(v => v.Offers).ThenInclude(o => o.Store)
+            .Include(p => p.Variants).ThenInclude(v => v.Offers).ThenInclude(o => o.Seller)
             .Include(p => p.Specifications)
-            .Where(p => p.IsActive && p.Variants.Any(v => v.Offers.Any(o => o.IsAvailable && o.Price > 0)))
-            .OrderBy(p => p.Variants.SelectMany(v => v.Offers).Where(o => o.IsAvailable && o.Price > 0).Min(o => (decimal?)o.Price) ?? 999999m)
-            .Take(limit)
+            .Where(p => p.IsActive)
             .AsNoTracking()
             .ToListAsync(cancellationToken);
 
-        return products.Select(MapToPhoneDto).ToList();
+        var list = products.Select(p => MapToPhoneDto(p))
+                           .Where(d => d.LowestPrice > 0 && d.StoresPrices.Count >= 2)
+                           .OrderBy(d => d.LowestPrice)
+                           .Take(limit)
+                           .ToList();
+
+        // Eğer 2+ mağazalı telefon sayısı limitin altındaysa 1+ mağazalı olanları da dahil et
+        if (list.Count < limit)
+        {
+            var fallback = products.Select(p => MapToPhoneDto(p))
+                                   .Where(d => d.LowestPrice > 0)
+                                   .OrderBy(d => d.LowestPrice)
+                                   .Take(limit)
+                                   .ToList();
+            if (fallback.Count > list.Count) list = fallback;
+        }
+
+        return list;
     }
 
     public async Task<IReadOnlyList<PhoneDto>> GetNewReleasesAsync(int limit = 6, CancellationToken cancellationToken = default)
     {
         var products = await _context.Products
             .Include(p => p.Brand)
-            .Include(p => p.Variants)
-                .ThenInclude(v => v.Offers)
-                    .ThenInclude(o => o.Store)
+            .Include(p => p.Variants).ThenInclude(v => v.Offers).ThenInclude(o => o.Store)
+            .Include(p => p.Variants).ThenInclude(v => v.Offers).ThenInclude(o => o.Seller)
             .Include(p => p.Specifications)
             .Where(p => p.IsActive && p.IsNew)
             .OrderByDescending(p => p.ReleaseDate)
@@ -380,16 +490,15 @@ public class ProductService : IProductService
             .AsNoTracking()
             .ToListAsync(cancellationToken);
 
-        return products.Select(MapToPhoneDto).ToList();
+        return products.Select(p => MapToPhoneDto(p)).ToList();
     }
 
     public async Task<IReadOnlyList<PhoneDto>> GetPopularAsync(int limit = 6, CancellationToken cancellationToken = default)
     {
         var products = await _context.Products
             .Include(p => p.Brand)
-            .Include(p => p.Variants)
-                .ThenInclude(v => v.Offers)
-                    .ThenInclude(o => o.Store)
+            .Include(p => p.Variants).ThenInclude(v => v.Offers).ThenInclude(o => o.Store)
+            .Include(p => p.Variants).ThenInclude(v => v.Offers).ThenInclude(o => o.Seller)
             .Include(p => p.Specifications)
             .Where(p => p.IsActive)
             .OrderByDescending(p => p.ReviewCount)
@@ -397,64 +506,54 @@ public class ProductService : IProductService
             .AsNoTracking()
             .ToListAsync(cancellationToken);
 
-        return products.Select(MapToPhoneDto).ToList();
+        return products.Select(p => MapToPhoneDto(p)).ToList();
     }
 
-    private static PhoneDto MapToPhoneDto(Product p)
+    private static string? SpecStr(IReadOnlyDictionary<string, string> d, string key) =>
+        d.TryGetValue(key, out var v) && !string.IsNullOrWhiteSpace(v) ? v : null;
+
+    private static int? SpecInt(IReadOnlyDictionary<string, string> d, string key) =>
+        int.TryParse(SpecStr(d, key), out var v) ? v : null;
+
+    private static double? SpecDbl(IReadOnlyDictionary<string, string> d, string key) =>
+        double.TryParse(SpecStr(d, key), System.Globalization.NumberStyles.Any,
+            System.Globalization.CultureInfo.InvariantCulture, out var v) ? v : null;
+
+    private static bool? SpecBool(IReadOnlyDictionary<string, string> d, string key) =>
+        bool.TryParse(SpecStr(d, key), out var v) ? v : null;
+
+    private static PhoneDto MapToPhoneDto(Product p, int? storageGb = null)
     {
-        var primaryVariant = p.Variants.OrderBy(v => v.LowestPrice).FirstOrDefault();
-        
-        var availableOffers = p.Variants
-            .SelectMany(v => v.Offers)
-            .Where(IsRealDirectOffer)
-            .OrderBy(o => o.Price)
-            .ToList();
+        var now = DateTime.UtcNow;
+        var (variant, offers) = SelectVariantOffers(p, storageGb, now);
 
-        decimal lowestPrice = 0m;
-        decimal highestPrice = 0m;
-        string? lowestStore = null;
-        string? lowestUrl = null;
+        decimal lowestPrice = offers.Count > 0 ? offers.Min(o => o.Price) : 0m;
+        // Tek teklif varsa en yüksek = en düşük. ESKİ HATA: lowest * 1.06 uydurması.
+        decimal highestPrice = offers.Count > 0 ? offers.Max(o => o.Price) : 0m;
+        var cheapest = offers.FirstOrDefault();
 
-        if (availableOffers.Any())
-        {
-            var firstOffer = availableOffers.First();
-            var lastOffer = availableOffers.Last();
-            lowestPrice = firstOffer.Price;
-            highestPrice = lastOffer.Price > firstOffer.Price
-                ? lastOffer.Price
-                : Math.Round(firstOffer.Price * 1.06m, 2);
-            lowestStore = firstOffer.Store?.Name ?? "Yetkili Mağaza";
-            lowestUrl = firstOffer.Url;
-        }
+        // ESKİ HATA: lowest * 0.95 ile uydurulan 6 aylık en düşük fiyat. Worker artık PriceHistory'den hesaplıyor.
+        decimal? sixMonthLowest = variant is { SixMonthLowestPrice: > 0 } && variant.SixMonthLowestPrice <= lowestPrice
+            ? variant.SixMonthLowestPrice
+            : null;
 
-        decimal? sixMonthLowest = null;
-        if (lowestPrice > 0)
-        {
-            var candidateSixMonth = primaryVariant?.SixMonthLowestPrice ?? 0m;
-            sixMonthLowest = (candidateSixMonth > 0 && candidateSixMonth <= lowestPrice)
-                ? candidateSixMonth
-                : Math.Round(lowestPrice * 0.95m, 0);
-        }
+        var dropValid = variant is { IsPriceDropped: true }
+                        && variant.PriceDropPercent is >= 2 and <= 35;
+        int? priceDropPercent = dropValid ? variant!.PriceDropPercent : null;
 
-        var rawDropPercent = primaryVariant?.PriceDropPercent ?? 0;
-        var isPriceDropped = lowestPrice > 0 && (primaryVariant?.IsPriceDropped ?? false) && rawDropPercent >= 2;
-        int? priceDropPercent = isPriceDropped ? Math.Clamp(rawDropPercent, 2, 35) : null;
-
-        var storePrices = availableOffers
-            .Select(o => new StorePriceDto(
-                Store: o.Store?.Name ?? "Yetkili Mağaza",
-                StoreSlug: o.Store?.Slug ?? "magaza",
-                SellerName: o.Seller?.Name ?? o.Store?.Name ?? "Yetkili Satıcı",
-                SellerRating: o.Seller?.Rating ?? o.Store?.ReliabilityScore ?? 9.5,
-                Price: o.Price,
-                Url: o.Url,
-                IsAvailable: o.IsAvailable,
-                LastUpdated: o.LastCheckedAt.ToString("o"),
-                ShippingText: o.ShippingText,
-                GuaranteeText: o.GuaranteeText,
-                InstallmentText: o.InstallmentText,
-                IsOfficial: o.IsOfficial))
-            .ToList();
+        var storePrices = offers.Select(o => new StorePriceDto(
+            Store: o.Store!.Name,
+            StoreSlug: o.Store.Slug,
+            SellerName: o.Seller?.Name ?? o.Store.Name,
+            SellerRating: o.Seller?.Rating ?? o.Store.ReliabilityScore,
+            Price: o.Price,
+            Url: o.Url,
+            IsAvailable: o.IsAvailable,
+            LastUpdated: o.LastCheckedAt.ToString("o"),
+            ShippingText: o.ShippingText,
+            GuaranteeText: o.GuaranteeText,
+            InstallmentText: o.InstallmentText,
+            IsOfficial: o.IsOfficial)).ToList();
 
         // Build Specs from Specifications collection
         var specsDict = p.Specifications
@@ -462,91 +561,87 @@ public class ProductService : IProductService
             .ToDictionary(g => g.Key, g => g.First().Value);
 
         var display = new DisplaySpecsDto(
-            Size: double.TryParse(specsDict.GetValueOrDefault("display:size", "6.7"), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var s) ? s : 6.7,
-            Resolution: specsDict.GetValueOrDefault("display:resolution", "2796 x 1290"),
-            Technology: specsDict.GetValueOrDefault("display:technology", "OLED"),
-            RefreshRate: int.TryParse(specsDict.GetValueOrDefault("display:refreshRate", "120"), out var rr) ? rr : 120,
-            Brightness: int.TryParse(specsDict.GetValueOrDefault("display:brightness", "2000"), out var br) ? br : 2000,
-            AspectRatio: specsDict.GetValueOrDefault("display:aspectRatio", "19.5:9"),
-            Protection: specsDict.GetValueOrDefault("display:protection", "Corning Gorilla Glass"),
-            Hdr: specsDict.GetValueOrDefault("display:hdr", "HDR10+, Dolby Vision"),
-            Ppi: int.TryParse(specsDict.GetValueOrDefault("display:ppi", "450"), out var ppi) ? ppi : 450);
+            Size: SpecDbl(specsDict, "display:size"),
+            Resolution: SpecStr(specsDict, "display:resolution"),
+            Technology: SpecStr(specsDict, "display:technology"),
+            RefreshRate: SpecInt(specsDict, "display:refreshRate"),
+            Brightness: SpecInt(specsDict, "display:brightness"),
+            AspectRatio: SpecStr(specsDict, "display:aspectRatio"),
+            Protection: SpecStr(specsDict, "display:protection"),
+            Hdr: SpecStr(specsDict, "display:hdr"),
+            Ppi: SpecInt(specsDict, "display:ppi"));
 
-        var mainMp = int.TryParse(specsDict.GetValueOrDefault("camera:mainMp", "48"), out var mmp) ? mmp : 48;
-        var uwMp = int.TryParse(specsDict.GetValueOrDefault("camera:ultrawideMp", "12"), out var ump) ? ump : 12;
-        var teleMp = int.TryParse(specsDict.GetValueOrDefault("camera:telephotoMp", "12"), out var tmp) ? tmp : 12;
-        var frontMp = int.TryParse(specsDict.GetValueOrDefault("camera:frontMp", "12"), out var fmp) ? fmp : 12;
+        var mainMp = SpecInt(specsDict, "camera:mainMp");
+        var uwMp = SpecInt(specsDict, "camera:ultrawideMp");
+        var teleMp = SpecInt(specsDict, "camera:telephotoMp");
+        var frontMp = SpecInt(specsDict, "camera:frontMp");
 
         var camera = new CameraSpecsDto(
-            MainCamera: new MainCameraSpecsDto(
-                mainMp,
-                specsDict.GetValueOrDefault("camera:mainAperture", "f/1.8"),
-                specsDict.GetValueOrDefault("camera:sensorSize", "1/1.3\""),
-                bool.TryParse(specsDict.GetValueOrDefault("camera:ois", "true"), out var ois) ? ois : true,
-                specsDict.GetValueOrDefault("camera:autofocus", "Dual Pixel PDAF")),
-            Ultrawide: new UltrawideSpecsDto(
-                uwMp,
-                specsDict.GetValueOrDefault("camera:ultrawideAperture", "f/2.2"),
-                120),
-            Telephoto: teleMp > 0 ? new TelephotoSpecsDto(
-                teleMp,
-                specsDict.GetValueOrDefault("camera:telephotoAperture", "f/2.8"),
-                int.TryParse(specsDict.GetValueOrDefault("camera:opticalZoom", "3"), out var oz) ? oz : 3,
-                30) : null,
-            FrontCamera: new FrontCameraSpecsDto(
-                frontMp,
-                specsDict.GetValueOrDefault("camera:frontAperture", "f/2.2"),
-                true),
-            VideoCapabilities: new List<string> { "4K@60fps", "4K@30fps", "1080p@240fps", "HDR Video" },
-            Features: new List<string> { "Gece Modu", "Portre Modu", "Yapay Zeka Destekli Fotoğrafçılık", "Pro RAW Modu" });
+            MainCamera: mainMp.HasValue ? new MainCameraSpecsDto(
+                Megapixels: mainMp.Value,
+                Aperture: SpecStr(specsDict, "camera:mainAperture"),
+                SensorSize: SpecStr(specsDict, "camera:sensorSize"),
+                Ois: SpecBool(specsDict, "camera:ois"),
+                Autofocus: SpecStr(specsDict, "camera:autofocus")) : null,
+            Ultrawide: uwMp.HasValue ? new UltrawideSpecsDto(
+                Megapixels: uwMp.Value,
+                Aperture: SpecStr(specsDict, "camera:ultrawideAperture"),
+                Fov: SpecInt(specsDict, "camera:ultrawideFov")) : null,
+            Telephoto: teleMp is > 0 ? new TelephotoSpecsDto(
+                Megapixels: teleMp.Value,
+                Aperture: SpecStr(specsDict, "camera:telephotoAperture"),
+                OpticalZoom: SpecInt(specsDict, "camera:opticalZoom"),
+                MaxZoom: SpecInt(specsDict, "camera:maxZoom")) : null,
+            FrontCamera: frontMp.HasValue ? new FrontCameraSpecsDto(
+                Megapixels: frontMp.Value,
+                Aperture: SpecStr(specsDict, "camera:frontAperture"),
+                Autofocus: SpecBool(specsDict, "camera:frontAutofocus")) : null,
+            VideoCapabilities: null,
+            Features: null);
 
         var battery = new BatterySpecsDto(
-            Capacity: int.TryParse(specsDict.GetValueOrDefault("battery:capacity", "4500"), out var cap) ? cap : 4500,
-            WiredCharging: int.TryParse(specsDict.GetValueOrDefault("battery:wiredCharging", "45"), out var wc) ? wc : 45,
-            WirelessCharging: int.TryParse(specsDict.GetValueOrDefault("battery:wirelessCharging", "25"), out var wlc) ? wlc : 25,
-            ReverseWirelessCharging: bool.TryParse(specsDict.GetValueOrDefault("battery:reverseWireless", "true"), out var rwc) ? rwc : true,
-            ChargingTime: specsDict.GetValueOrDefault("battery:chargingTime", "0'dan %50'ye 30 dakikada"),
-            Removable: false);
-
-        var antutu = int.TryParse(specsDict.GetValueOrDefault("performance:antutuScore", "1450000"), out var ant) ? ant : 1450000;
-        var gbSingle = int.TryParse(specsDict.GetValueOrDefault("performance:geekbenchSingle", "2100"), out var gbs) ? gbs : 2100;
-        var gbMulti = int.TryParse(specsDict.GetValueOrDefault("performance:geekbenchMulti", "5600"), out var gbm) ? gbm : 5600;
+            Capacity: SpecInt(specsDict, "battery:capacity"),
+            WiredCharging: SpecInt(specsDict, "battery:wiredCharging"),
+            WirelessCharging: SpecInt(specsDict, "battery:wirelessCharging"),
+            ReverseWirelessCharging: SpecBool(specsDict, "battery:reverseWireless"),
+            ChargingTime: SpecStr(specsDict, "battery:chargingTime"),
+            Removable: SpecBool(specsDict, "battery:removable"));
 
         var performance = new PerformanceSpecsDto(
-            Chipset: specsDict.GetValueOrDefault("performance:chipset", "Amiral Gemisi 8-Core İşlemci"),
-            Cpu: specsDict.GetValueOrDefault("performance:cpu", "Octa-core yüksek performans mimarisi"),
-            Gpu: specsDict.GetValueOrDefault("performance:gpu", "Gelişmiş Donanım Hızlandırmalı GPU"),
-            Ram: primaryVariant?.RamGb ?? (int.TryParse(specsDict.GetValueOrDefault("performance:ram", "8"), out var rVal) ? rVal : 8),
-            Storage: primaryVariant?.StorageGb ?? (int.TryParse(specsDict.GetValueOrDefault("performance:storage", "256"), out var sVal) ? sVal : 256),
-            StorageType: specsDict.GetValueOrDefault("performance:storageType", "UFS 4.0"),
-            ExpandableStorage: bool.TryParse(specsDict.GetValueOrDefault("performance:expandableStorage", "false"), out var exp) && exp,
-            AntutuScore: antutu,
-            GeekbenchSingle: gbSingle,
-            GeekbenchMulti: gbMulti);
+            Chipset: SpecStr(specsDict, "performance:chipset"),
+            Cpu: SpecStr(specsDict, "performance:cpu"),
+            Gpu: SpecStr(specsDict, "performance:gpu"),
+            Ram: variant?.RamGb ?? SpecInt(specsDict, "performance:ram"),
+            Storage: variant?.StorageGb ?? SpecInt(specsDict, "performance:storage"),
+            StorageType: SpecStr(specsDict, "performance:storageType"),
+            ExpandableStorage: SpecBool(specsDict, "performance:expandableStorage"),
+            AntutuScore: SpecInt(specsDict, "performance:antutuScore"),
+            GeekbenchSingle: SpecInt(specsDict, "performance:geekbenchSingle"),
+            GeekbenchMulti: SpecInt(specsDict, "performance:geekbenchMulti"));
 
         var connectivity = new ConnectivitySpecsDto(
-            Sim: specsDict.GetValueOrDefault("connectivity:sim", "Nano-SIM + eSIM"),
-            Nfc: !bool.TryParse(specsDict.GetValueOrDefault("connectivity:nfc", "true"), out var nfc) || nfc,
-            Bluetooth: specsDict.GetValueOrDefault("connectivity:bluetooth", "5.4"),
-            Wifi: specsDict.GetValueOrDefault("connectivity:wifi", "Wi-Fi 7"),
-            Usb: specsDict.GetValueOrDefault("connectivity:usb", "USB-C 3.2"),
-            FiveG: !bool.TryParse(specsDict.GetValueOrDefault("connectivity:fiveG", "true"), out var fg) || fg,
-            Infrared: bool.TryParse(specsDict.GetValueOrDefault("connectivity:infrared", "false"), out var ir) && ir);
+            Sim: SpecStr(specsDict, "connectivity:sim"),
+            Nfc: SpecBool(specsDict, "connectivity:nfc"),
+            Bluetooth: SpecStr(specsDict, "connectivity:bluetooth"),
+            Wifi: SpecStr(specsDict, "connectivity:wifi"),
+            Usb: SpecStr(specsDict, "connectivity:usb"),
+            FiveG: SpecBool(specsDict, "connectivity:fiveG"),
+            Infrared: SpecBool(specsDict, "connectivity:infrared"));
 
         var design = new DesignSpecsDto(
-            Width: double.TryParse(specsDict.GetValueOrDefault("design:width", "75.9"), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var dw) ? dw : 75.9,
-            Height: double.TryParse(specsDict.GetValueOrDefault("design:height", "161.2"), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var dh) ? dh : 161.2,
-            Thickness: double.TryParse(specsDict.GetValueOrDefault("design:thickness", "8.2"), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var dt) ? dt : 8.2,
-            Weight: double.TryParse(specsDict.GetValueOrDefault("design:weight", "195"), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var dwg) ? dwg : 195,
-            Materials: specsDict.GetValueOrDefault("design:materials", "Alüminyum Çerçeve ve Cam Gövde"),
-            Colors: new List<string> { "Siyah", "Titanyum Gümüş", "Gece Mavisi" },
-            WaterResistance: specsDict.GetValueOrDefault("design:waterResistance", "IP68"),
-            Fingerprint: specsDict.GetValueOrDefault("design:fingerprint", "Ekran İçi Parmak İzi Okuyucu"),
-            FaceId: !bool.TryParse(specsDict.GetValueOrDefault("design:faceId", "true"), out var fid) || fid);
+            Width: SpecDbl(specsDict, "design:width"),
+            Height: SpecDbl(specsDict, "design:height"),
+            Thickness: SpecDbl(specsDict, "design:thickness"),
+            Weight: SpecDbl(specsDict, "design:weight"),
+            Materials: SpecStr(specsDict, "design:materials"),
+            Colors: null,
+            WaterResistance: SpecStr(specsDict, "design:waterResistance"),
+            Fingerprint: SpecStr(specsDict, "design:fingerprint"),
+            FaceId: SpecBool(specsDict, "design:faceId"));
 
         var software = new SoftwareSpecsDto(
-            Os: specsDict.GetValueOrDefault("software:os", "Android 15 / iOS 18"),
-            UpdatePolicy: specsDict.GetValueOrDefault("software:updatePolicy", "4-7 Yıl Resmi Güncelleme Garantisi"));
+            Os: SpecStr(specsDict, "software:os"),
+            UpdatePolicy: SpecStr(specsDict, "software:updatePolicy"));
 
         var phoneSpecs = new PhoneSpecsDto(display, camera, battery, performance, connectivity, design, software);
 
@@ -557,15 +652,15 @@ public class ProductService : IProductService
             Brand: p.Brand.Name,
             BrandSlug: p.Brand.Slug,
             Image: p.ImageUrl,
-            Images: new List<string> { p.ImageUrl, p.ImageUrl },
+            Images: string.IsNullOrWhiteSpace(p.ImageUrl) ? new List<string>() : new List<string> { p.ImageUrl },
             LowestPrice: lowestPrice,
             HighestPrice: highestPrice,
             SixMonthLowestPrice: sixMonthLowest,
-            PriceStore: lowestStore,
-            PriceUrl: lowestUrl,
-            ReleaseDate: p.ReleaseDate?.ToString("o") ?? DateTime.UtcNow.ToString("o"),
+            PriceStore: cheapest?.Store?.Name,
+            PriceUrl: cheapest?.Url,
+            ReleaseDate: p.ReleaseDate?.ToString("o"),
             IsNew: p.IsNew,
-            IsPriceDropped: isPriceDropped,
+            IsPriceDropped: dropValid,
             PriceDropPercent: priceDropPercent,
             Specs: phoneSpecs,
             StoresPrices: storePrices,

@@ -7,12 +7,10 @@
     "brandSlug": "apple",
     "image": "/images/phones/iphone-16-pro-max.webp",
     "images": [
-      "/images/phones/iphone-16-pro-max.webp",
-      "/images/phones/iphone-16-pro-max.webp",
       "/images/phones/iphone-16-pro-max.webp"
     ],
     "lowestPrice": 100472,
-    "highestPrice": 143499.04,
+    "highestPrice": 125439.02,
     "sixMonthLowestPrice": 95448,
     "priceStore": "MediaMarkt",
     "priceUrl": "https://www.mediamarkt.com.tr/tr/product/_apple-iphone-16-pro-max-512-gb-akilli-telefon-natural-titanium-146317868.html",
@@ -157,7 +155,8 @@
         "installmentText": "Peşin Fiyatına 3 Taksit",
         "isOfficial": false
       }
-    ]
+    ],
+    "storesCount": 2
   },
   {
     "id": "phone-002",
@@ -167,8 +166,6 @@
     "brandSlug": "apple",
     "image": "/images/phones/iphone-16-pro.svg",
     "images": [
-      "/images/phones/iphone-16-pro.svg",
-      "/images/phones/iphone-16-pro.svg",
       "/images/phones/iphone-16-pro.svg"
     ],
     "lowestPrice": 84959,
@@ -331,7 +328,8 @@
         "installmentText": "Peşin Fiyatına 3 Taksit",
         "isOfficial": false
       }
-    ]
+    ],
+    "storesCount": 3
   },
   {
     "id": "phone-003",
@@ -341,8 +339,6 @@
     "brandSlug": "apple",
     "image": "/images/phones/iphone-16-plus.svg",
     "images": [
-      "/images/phones/iphone-16-plus.svg",
-      "/images/phones/iphone-16-plus.svg",
       "/images/phones/iphone-16-plus.svg"
     ],
     "lowestPrice": 80968.52,
@@ -499,7 +495,8 @@
         "installmentText": "Peşin Fiyatına 3 Taksit",
         "isOfficial": false
       }
-    ]
+    ],
+    "storesCount": 3
   },
   {
     "id": "phone-004",
@@ -509,12 +506,10 @@
     "brandSlug": "apple",
     "image": "/images/phones/iphone-16.webp",
     "images": [
-      "/images/phones/iphone-16.webp",
-      "/images/phones/iphone-16.webp",
       "/images/phones/iphone-16.webp"
     ],
     "lowestPrice": 69399,
-    "highestPrice": 75992,
+    "highestPrice": 69399,
     "sixMonthLowestPrice": 65929,
     "priceStore": "MediaMarkt",
     "priceUrl": "https://www.mediamarkt.com.tr/tr/product/_apple-iphone-16-128gb-akilli-telefon-siyah-mye73tua-1239553.html",
@@ -653,7 +648,8 @@
         "installmentText": "Peşin Fiyatına 3 Taksit",
         "isOfficial": false
       }
-    ]
+    ],
+    "storesCount": 2
   },
   {
     "id": "phone-005",
@@ -663,12 +659,10 @@
     "brandSlug": "apple",
     "image": "/images/phones/iphone-15-pro-max.webp",
     "images": [
-      "/images/phones/iphone-15-pro-max.webp",
-      "/images/phones/iphone-15-pro-max.webp",
       "/images/phones/iphone-15-pro-max.webp"
     ],
     "lowestPrice": 74299,
-    "highestPrice": 99999,
+    "highestPrice": 74299,
     "sixMonthLowestPrice": 70584,
     "priceStore": "MediaMarkt",
     "priceUrl": "https://www.mediamarkt.com.tr/tr/product/_apple-iphone-15-pro-max-8-gb-256-gb-akilli-telefon-naturel-titanyum-144011017.html",
@@ -798,22 +792,9 @@
         "guaranteeText": "2 Yıl Resmi Distribütör Garantili",
         "installmentText": "Peşin Fiyatına 3 Taksit",
         "isOfficial": false
-      },
-      {
-        "store": "Teknosa",
-        "storeSlug": "teknosa",
-        "sellerName": "Teknosa Mağazacılık",
-        "sellerRating": 9.5,
-        "price": 99999,
-        "url": "https://www.teknosa.com/apple-iphone-15-pro-max-256gb-mavi-titanyum-p-125079246?shopId=5537",
-        "isAvailable": true,
-        "lastUpdated": "2026-11-05T03:21:20.063Z",
-        "shippingText": "Mağazadan Hemen Teslim Al",
-        "guaranteeText": "2 Yıl Resmi Distribütör Garantili",
-        "installmentText": "Peşin Fiyatına 3 Taksit",
-        "isOfficial": false
       }
-    ]
+    ],
+    "storesCount": 1
   },
   {
     "id": "phone-006",
@@ -823,12 +804,10 @@
     "brandSlug": "apple",
     "image": "/images/phones/iphone-15-pro.svg",
     "images": [
-      "/images/phones/iphone-15-pro.svg",
-      "/images/phones/iphone-15-pro.svg",
       "/images/phones/iphone-15-pro.svg"
     ],
     "lowestPrice": 73999,
-    "highestPrice": 81029,
+    "highestPrice": 73999,
     "sixMonthLowestPrice": 70299,
     "priceStore": "MediaMarkt",
     "priceUrl": "https://www.mediamarkt.com.tr/tr/product/_apple-iphone-15-pro-512-gb-akilli-telefon-siyah-146563884.html",
@@ -959,7 +938,8 @@
         "installmentText": "Peşin Fiyatına 3 Taksit",
         "isOfficial": false
       }
-    ]
+    ],
+    "storesCount": 1
   },
   {
     "id": "phone-007",
@@ -969,12 +949,10 @@
     "brandSlug": "apple",
     "image": "/images/phones/iphone-15.webp",
     "images": [
-      "/images/phones/iphone-15.webp",
-      "/images/phones/iphone-15.webp",
       "/images/phones/iphone-15.webp"
     ],
     "lowestPrice": 56449,
-    "highestPrice": 61812,
+    "highestPrice": 56499,
     "sixMonthLowestPrice": 53627,
     "priceStore": "n11",
     "priceUrl": "https://www.n11.com/urun/apple-iphone-15-128-gb-apple-turkiye-garantili-43821353?magaza=macinternet&renk=mavi&dahili-hafiza=128-gb",
@@ -1113,7 +1091,8 @@
         "installmentText": "Peşin Fiyatına 3 Taksit",
         "isOfficial": false
       }
-    ]
+    ],
+    "storesCount": 2
   },
   {
     "id": "phone-008",
@@ -1123,15 +1102,13 @@
     "brandSlug": "apple",
     "image": "/images/phones/iphone-14.webp",
     "images": [
-      "/images/phones/iphone-14.webp",
-      "/images/phones/iphone-14.webp",
       "/images/phones/iphone-14.webp"
     ],
-    "lowestPrice": 62500,
-    "highestPrice": 68438,
+    "lowestPrice": 65250,
+    "highestPrice": 65250,
     "sixMonthLowestPrice": 59375,
-    "priceStore": "Trendyol",
-    "priceUrl": "https://www.trendyol.com/apple/iphone-14-128-gb-gece-yarisi-p-355707175?merchantId=1108341",
+    "priceStore": "MediaMarkt",
+    "priceUrl": "https://www.mediamarkt.com.tr/tr/product/_apple-iphone-14-128-gb-akilli-telefon-siyah-146322769.html",
     "releaseDate": "2023-11-20T00:00:00Z",
     "isNew": false,
     "isPriceDropped": true,
@@ -1240,20 +1217,6 @@
     },
     "storesPrices": [
       {
-        "store": "Trendyol",
-        "storeSlug": "trendyol",
-        "sellerName": "Trendyol Doğrulanmış Satıcı",
-        "sellerRating": 9.8,
-        "price": 62500,
-        "url": "https://www.trendyol.com/apple/iphone-14-128-gb-gece-yarisi-p-355707175?merchantId=1108341",
-        "isAvailable": true,
-        "lastUpdated": "2026-11-05T06:21:20.063Z",
-        "shippingText": "Hızlı Teslimat • Ücretsiz Kargo",
-        "guaranteeText": "2 Yıl Resmi Distribütör Garantili",
-        "installmentText": "Peşin Fiyatına 3 Taksit",
-        "isOfficial": true
-      },
-      {
         "store": "MediaMarkt",
         "storeSlug": "mediamarkt",
         "sellerName": "MediaMarkt Türkiye",
@@ -1267,7 +1230,8 @@
         "installmentText": "Peşin Fiyatına 3 Taksit",
         "isOfficial": false
       }
-    ]
+    ],
+    "storesCount": 1
   },
   {
     "id": "phone-009",
@@ -1277,12 +1241,10 @@
     "brandSlug": "apple",
     "image": "/images/phones/iphone-13.webp",
     "images": [
-      "/images/phones/iphone-13.webp",
-      "/images/phones/iphone-13.webp",
       "/images/phones/iphone-13.webp"
     ],
     "lowestPrice": 50379.04,
-    "highestPrice": 55165,
+    "highestPrice": 50379.04,
     "sixMonthLowestPrice": 47860,
     "priceStore": "n11",
     "priceUrl": "https://www.n11.com/urun/apple-iphone-13-128-gb-apple-turkiye-garantili-2141312?magaza=mobilltek&renk=beyaz&dahili-hafiza=128-gb",
@@ -1407,7 +1369,8 @@
         "installmentText": "Peşin Fiyatına 3 Taksit",
         "isOfficial": false
       }
-    ]
+    ],
+    "storesCount": 1
   },
   {
     "id": "phone-010",
@@ -1417,12 +1380,10 @@
     "brandSlug": "apple",
     "image": "/images/phones/iphone-se-4-nesil.svg",
     "images": [
-      "/images/phones/iphone-se-4-nesil.svg",
-      "/images/phones/iphone-se-4-nesil.svg",
       "/images/phones/iphone-se-4-nesil.svg"
     ],
     "lowestPrice": 29591,
-    "highestPrice": 29632,
+    "highestPrice": 29591,
     "sixMonthLowestPrice": 25708,
     "priceStore": "MediaMarkt",
     "priceUrl": "https://www.mediamarkt.com.tr/tr/product/_apple-iphone-se-64-gb-akilli-telefon-beyaz-147055797.html",
@@ -1542,7 +1503,8 @@
         "installmentText": "Peşin Fiyatına 3 Taksit",
         "isOfficial": false
       }
-    ]
+    ],
+    "storesCount": 1
   },
   {
     "id": "phone-011",
@@ -1552,12 +1514,10 @@
     "brandSlug": "apple",
     "image": "/images/phones/iphone-17-pro-max.svg",
     "images": [
-      "/images/phones/iphone-17-pro-max.svg",
-      "/images/phones/iphone-17-pro-max.svg",
       "/images/phones/iphone-17-pro-max.svg"
     ],
     "lowestPrice": 105699,
-    "highestPrice": 115740,
+    "highestPrice": 109899,
     "sixMonthLowestPrice": 100414,
     "priceStore": "Trendyol",
     "priceUrl": "https://www.trendyol.com/apple/iphone-17-pro-max-256gb-abis-ithalatci-garantili-p-1038464786?merchantId=870936",
@@ -1702,7 +1662,8 @@
         "installmentText": "Peşin Fiyatına 3 Taksit",
         "isOfficial": false
       }
-    ]
+    ],
+    "storesCount": 2
   },
   {
     "id": "phone-012",
@@ -1712,12 +1673,10 @@
     "brandSlug": "apple",
     "image": "/images/phones/iphone-air.svg",
     "images": [
-      "/images/phones/iphone-air.svg",
-      "/images/phones/iphone-air.svg",
       "/images/phones/iphone-air.svg"
     ],
     "lowestPrice": 80999.01,
-    "highestPrice": 88694,
+    "highestPrice": 82899,
     "sixMonthLowestPrice": 76949,
     "priceStore": "PttAVM",
     "priceUrl": "https://www.pttavm.com/apple-iphone-air-256-gb-ucuk-altin-ithalatci-garantili-p-1439501628",
@@ -1856,7 +1815,8 @@
         "installmentText": "Peşin Fiyatına 3 Taksit",
         "isOfficial": false
       }
-    ]
+    ],
+    "storesCount": 2
   },
   {
     "id": "phone-013",
@@ -1866,15 +1826,13 @@
     "brandSlug": "samsung",
     "image": "/images/phones/samsung-galaxy-s25-ultra.webp",
     "images": [
-      "/images/phones/samsung-galaxy-s25-ultra.webp",
-      "/images/phones/samsung-galaxy-s25-ultra.webp",
       "/images/phones/samsung-galaxy-s25-ultra.webp"
     ],
-    "lowestPrice": 69997,
+    "lowestPrice": 69999,
     "highestPrice": 79399,
     "sixMonthLowestPrice": 66497,
-    "priceStore": "Teknosa",
-    "priceUrl": "https://www.teknosa.com/samsung-galaxy-s25-ultra-5g-512gb-titanyum-gumus-akilli-telefon-p-125079845?shopId=teknosa",
+    "priceStore": "Amazon Türkiye",
+    "priceUrl": "https://www.amazon.com.tr/dp/B0DT6WQHHR",
     "releaseDate": "2024-10-15T00:00:00Z",
     "isNew": true,
     "isPriceDropped": true,
@@ -1989,20 +1947,6 @@
     },
     "storesPrices": [
       {
-        "store": "Teknosa",
-        "storeSlug": "teknosa",
-        "sellerName": "Teknosa Mağazacılık",
-        "sellerRating": 9.5,
-        "price": 69997,
-        "url": "https://www.teknosa.com/samsung-galaxy-s25-ultra-5g-512gb-titanyum-gumus-akilli-telefon-p-125079845?shopId=teknosa",
-        "isAvailable": true,
-        "lastUpdated": "2026-11-05T03:21:20.065Z",
-        "shippingText": "Mağazadan Hemen Teslim Al",
-        "guaranteeText": "2 Yıl Resmi Distribütör Garantili",
-        "installmentText": "Peşin Fiyatına 3 Taksit",
-        "isOfficial": false
-      },
-      {
         "store": "Amazon Türkiye",
         "storeSlug": "amazon",
         "sellerName": "Amazon Türkiye",
@@ -2015,20 +1959,6 @@
         "guaranteeText": "2 Yıl Resmi Distribütör Garantili",
         "installmentText": "Peşin Fiyatına 3 Taksit",
         "isOfficial": false
-      },
-      {
-        "store": "Trendyol",
-        "storeSlug": "trendyol",
-        "sellerName": "Trendyol Doğrulanmış Satıcı",
-        "sellerRating": 9.8,
-        "price": 69999,
-        "url": "https://www.trendyol.com/samsung/galaxy-s25-ultra-512-gb-titanyum-siyah-samsung-turkiye-garantili-p-889950721?merchantId=968",
-        "isAvailable": true,
-        "lastUpdated": "2026-11-05T06:21:20.065Z",
-        "shippingText": "Hızlı Teslimat • Ücretsiz Kargo",
-        "guaranteeText": "2 Yıl Resmi Distribütör Garantili",
-        "installmentText": "Peşin Fiyatına 3 Taksit",
-        "isOfficial": true
       },
       {
         "store": "PttAVM",
@@ -2086,22 +2016,21 @@
         "installmentText": "Peşin Fiyatına 3 Taksit",
         "isOfficial": false
       }
-    ]
+    ],
+    "storesCount": 5
   },
   {
     "id": "phone-014",
-    "slug": "samsung-galaxy-s25",
+    "slug": "samsung-galaxy-s25-plus",
     "name": "Samsung Galaxy S25+",
     "brand": "Samsung",
     "brandSlug": "samsung",
     "image": "/images/phones/samsung-galaxy-s25.svg",
     "images": [
-      "/images/phones/samsung-galaxy-s25.svg",
-      "/images/phones/samsung-galaxy-s25.svg",
       "/images/phones/samsung-galaxy-s25.svg"
     ],
     "lowestPrice": 64599,
-    "highestPrice": 70736,
+    "highestPrice": 64599,
     "sixMonthLowestPrice": 61369,
     "priceStore": "n11",
     "priceUrl": "https://www.n11.com/urun/samsung-galaxy-s25-12-gb-256-gb-samsung-turkiye-garantili-66614974?magaza=blackbird1&renk=buz-mavisi&dahili-hafiza=256-gb",
@@ -2232,22 +2161,21 @@
         "installmentText": "Peşin Fiyatına 3 Taksit",
         "isOfficial": false
       }
-    ]
+    ],
+    "storesCount": 1
   },
   {
     "id": "phone-015",
-    "slug": "samsung-galaxy-s25-phone-015",
+    "slug": "samsung-galaxy-s25",
     "name": "Samsung Galaxy S25",
     "brand": "Samsung",
     "brandSlug": "samsung",
     "image": "/images/phones/samsung-galaxy-s25.svg",
     "images": [
-      "/images/phones/samsung-galaxy-s25.svg",
-      "/images/phones/samsung-galaxy-s25.svg",
       "/images/phones/samsung-galaxy-s25.svg"
     ],
     "lowestPrice": 51699,
-    "highestPrice": 53831,
+    "highestPrice": 51699,
     "sixMonthLowestPrice": 46703,
     "priceStore": "MediaMarkt",
     "priceUrl": "https://www.mediamarkt.com.tr/tr/product/_samsung-galaxy-s25-12-gb-256-gb-akilli-telefon-gumus-166767220.html",
@@ -2378,7 +2306,8 @@
         "installmentText": "Peşin Fiyatına 3 Taksit",
         "isOfficial": false
       }
-    ]
+    ],
+    "storesCount": 1
   },
   {
     "id": "phone-016",
@@ -2388,8 +2317,6 @@
     "brandSlug": "samsung",
     "image": "/images/phones/samsung-galaxy-s24-ultra.webp",
     "images": [
-      "/images/phones/samsung-galaxy-s24-ultra.webp",
-      "/images/phones/samsung-galaxy-s24-ultra.webp",
       "/images/phones/samsung-galaxy-s24-ultra.webp"
     ],
     "lowestPrice": 76799.04,
@@ -2538,7 +2465,8 @@
         "installmentText": "Peşin Fiyatına 3 Taksit",
         "isOfficial": false
       }
-    ]
+    ],
+    "storesCount": 2
   },
   {
     "id": "phone-017",
@@ -2548,12 +2476,10 @@
     "brandSlug": "samsung",
     "image": "/images/phones/samsung-galaxy-s24-fe.svg",
     "images": [
-      "/images/phones/samsung-galaxy-s24-fe.svg",
-      "/images/phones/samsung-galaxy-s24-fe.svg",
       "/images/phones/samsung-galaxy-s24-fe.svg"
     ],
     "lowestPrice": 42999,
-    "highestPrice": 44113,
+    "highestPrice": 42999,
     "sixMonthLowestPrice": 38272,
     "priceStore": "MediaMarkt",
     "priceUrl": "https://www.mediamarkt.com.tr/tr/product/_samsung-galaxy-s24-fe-5g-8-gb-256-gb-akilli-telefon-yesil-166438143.html",
@@ -2684,7 +2610,8 @@
         "installmentText": "Peşin Fiyatına 3 Taksit",
         "isOfficial": false
       }
-    ]
+    ],
+    "storesCount": 1
   },
   {
     "id": "phone-018",
@@ -2694,12 +2621,10 @@
     "brandSlug": "samsung",
     "image": "/images/phones/samsung-galaxy-s23-fe.svg",
     "images": [
-      "/images/phones/samsung-galaxy-s23-fe.svg",
-      "/images/phones/samsung-galaxy-s23-fe.svg",
       "/images/phones/samsung-galaxy-s23-fe.svg"
     ],
     "lowestPrice": 40499,
-    "highestPrice": 44057,
+    "highestPrice": 40999,
     "sixMonthLowestPrice": 38223,
     "priceStore": "Hepsiburada",
     "priceUrl": "https://www.hepsiburada.com/samsung-galaxy-s23-fe-256-gb-samsung-turkiye-garantili-grafit-p-HBCV000052WYQ6?magaza=AKSOYLU",
@@ -2843,22 +2768,9 @@
         "guaranteeText": "2 Yıl Resmi Distribütör Garantili",
         "installmentText": "Peşin Fiyatına 3 Taksit",
         "isOfficial": false
-      },
-      {
-        "store": "Teknosa",
-        "storeSlug": "teknosa",
-        "sellerName": "Teknosa Mağazacılık",
-        "sellerRating": 9.5,
-        "price": 40999,
-        "url": "https://www.teknosa.com/samsung-galaxy-s23fe-256gb-graphite-akilli-telefon-p-125079300?shopId=5537",
-        "isAvailable": true,
-        "lastUpdated": "2026-11-05T03:21:20.066Z",
-        "shippingText": "Mağazadan Hemen Teslim Al",
-        "guaranteeText": "2 Yıl Resmi Distribütör Garantili",
-        "installmentText": "Peşin Fiyatına 3 Taksit",
-        "isOfficial": false
       }
-    ]
+    ],
+    "storesCount": 2
   },
   {
     "id": "phone-019",
@@ -2868,12 +2780,10 @@
     "brandSlug": "samsung",
     "image": "/images/phones/samsung-galaxy-s26-ultra.svg",
     "images": [
-      "/images/phones/samsung-galaxy-s26-ultra.svg",
-      "/images/phones/samsung-galaxy-s26-ultra.svg",
       "/images/phones/samsung-galaxy-s26-ultra.svg"
     ],
     "lowestPrice": 77999.89,
-    "highestPrice": 85410,
+    "highestPrice": 81861,
     "sixMonthLowestPrice": 74100,
     "priceStore": "PttAVM",
     "priceUrl": "https://www.pttavm.com/samsung-galaxy-s26-ultra-12-gb-256-gb-gok-mavisi-ithalatci-garantili-p-1511229684",
@@ -3018,7 +2928,8 @@
         "installmentText": "Peşin Fiyatına 3 Taksit",
         "isOfficial": false
       }
-    ]
+    ],
+    "storesCount": 2
   },
   {
     "id": "phone-020",
@@ -3028,12 +2939,10 @@
     "brandSlug": "samsung",
     "image": "/images/phones/samsung-galaxy-z-fold-6.webp",
     "images": [
-      "/images/phones/samsung-galaxy-z-fold-6.webp",
-      "/images/phones/samsung-galaxy-z-fold-6.webp",
       "/images/phones/samsung-galaxy-z-fold-6.webp"
     ],
     "lowestPrice": 68469,
-    "highestPrice": 81499,
+    "highestPrice": 68469,
     "sixMonthLowestPrice": 65046,
     "priceStore": "MediaMarkt",
     "priceUrl": "https://www.mediamarkt.com.tr/tr/product/_samsung-galaxy-z-fold6-512-gb-akilli-telefon-gumus-166767197.html",
@@ -3164,7 +3073,8 @@
         "installmentText": "Peşin Fiyatına 3 Taksit",
         "isOfficial": false
       }
-    ]
+    ],
+    "storesCount": 1
   },
   {
     "id": "phone-021",
@@ -3174,12 +3084,10 @@
     "brandSlug": "samsung",
     "image": "/images/phones/samsung-galaxy-z-flip-6.svg",
     "images": [
-      "/images/phones/samsung-galaxy-z-flip-6.svg",
-      "/images/phones/samsung-galaxy-z-flip-6.svg",
       "/images/phones/samsung-galaxy-z-flip-6.svg"
     ],
     "lowestPrice": 54999,
-    "highestPrice": 85519.3,
+    "highestPrice": 54999,
     "sixMonthLowestPrice": 50159,
     "priceStore": "MediaMarkt",
     "priceUrl": "https://www.mediamarkt.com.tr/tr/product/_samsung-galaxy-z-flip-6-12-gb-256-gb-akilli-telefon-mavi-166438177.html",
@@ -3304,7 +3212,8 @@
         "installmentText": "Peşin Fiyatına 3 Taksit",
         "isOfficial": false
       }
-    ]
+    ],
+    "storesCount": 1
   },
   {
     "id": "phone-022",
@@ -3314,8 +3223,6 @@
     "brandSlug": "samsung",
     "image": "/images/phones/samsung-galaxy-a56.webp",
     "images": [
-      "/images/phones/samsung-galaxy-a56.webp",
-      "/images/phones/samsung-galaxy-a56.webp",
       "/images/phones/samsung-galaxy-a56.webp"
     ],
     "lowestPrice": 39999,
@@ -3444,7 +3351,8 @@
         "installmentText": "Peşin Fiyatına 3 Taksit",
         "isOfficial": false
       }
-    ]
+    ],
+    "storesCount": 1
   },
   {
     "id": "phone-023",
@@ -3454,8 +3362,6 @@
     "brandSlug": "samsung",
     "image": "/images/phones/samsung-galaxy-a55.webp",
     "images": [
-      "/images/phones/samsung-galaxy-a55.webp",
-      "/images/phones/samsung-galaxy-a55.webp",
       "/images/phones/samsung-galaxy-a55.webp"
     ],
     "lowestPrice": 38499,
@@ -3584,7 +3490,8 @@
         "installmentText": "Peşin Fiyatına 3 Taksit",
         "isOfficial": false
       }
-    ]
+    ],
+    "storesCount": 1
   },
   {
     "id": "phone-024",
@@ -3594,8 +3501,6 @@
     "brandSlug": "samsung",
     "image": "/images/phones/samsung-galaxy-a36.svg",
     "images": [
-      "/images/phones/samsung-galaxy-a36.svg",
-      "/images/phones/samsung-galaxy-a36.svg",
       "/images/phones/samsung-galaxy-a36.svg"
     ],
     "lowestPrice": 29999,
@@ -3724,7 +3629,8 @@
         "installmentText": "Peşin Fiyatına 3 Taksit",
         "isOfficial": false
       }
-    ]
+    ],
+    "storesCount": 1
   },
   {
     "id": "phone-025",
@@ -3734,12 +3640,10 @@
     "brandSlug": "samsung",
     "image": "/images/phones/samsung-galaxy-a35.webp",
     "images": [
-      "/images/phones/samsung-galaxy-a35.webp",
-      "/images/phones/samsung-galaxy-a35.webp",
       "/images/phones/samsung-galaxy-a35.webp"
     ],
     "lowestPrice": 34999,
-    "highestPrice": 38324,
+    "highestPrice": 34999,
     "sixMonthLowestPrice": 33249,
     "priceStore": "MediaMarkt",
     "priceUrl": "https://www.mediamarkt.com.tr/tr/product/_samsung-galaxy-a35-5g-8-gb-128-gb-akilli-telefon-siyah-166757974.html",
@@ -3864,7 +3768,8 @@
         "installmentText": "Peşin Fiyatına 3 Taksit",
         "isOfficial": false
       }
-    ]
+    ],
+    "storesCount": 1
   },
   {
     "id": "phone-026",
@@ -3874,12 +3779,10 @@
     "brandSlug": "samsung",
     "image": "/images/phones/samsung-galaxy-a25-5g.svg",
     "images": [
-      "/images/phones/samsung-galaxy-a25-5g.svg",
-      "/images/phones/samsung-galaxy-a25-5g.svg",
       "/images/phones/samsung-galaxy-a25-5g.svg"
     ],
     "lowestPrice": 15499,
-    "highestPrice": 16971,
+    "highestPrice": 15499,
     "sixMonthLowestPrice": 14724,
     "priceStore": "MediaMarkt",
     "priceUrl": "https://www.mediamarkt.com.tr/tr/product/_samsung-galaxy-sm-a256elbdtur-6-gb-128-gb-akilli-telefon-mavi-149613764.html",
@@ -4004,7 +3907,8 @@
         "installmentText": "Peşin Fiyatına 3 Taksit",
         "isOfficial": false
       }
-    ]
+    ],
+    "storesCount": 1
   },
   {
     "id": "phone-027",
@@ -4014,12 +3918,10 @@
     "brandSlug": "samsung",
     "image": "/images/phones/samsung-galaxy-a16-5g.svg",
     "images": [
-      "/images/phones/samsung-galaxy-a16-5g.svg",
-      "/images/phones/samsung-galaxy-a16-5g.svg",
       "/images/phones/samsung-galaxy-a16-5g.svg"
     ],
     "lowestPrice": 14999,
-    "highestPrice": 16045,
+    "highestPrice": 14999,
     "sixMonthLowestPrice": 13920,
     "priceStore": "MediaMarkt",
     "priceUrl": "https://www.mediamarkt.com.tr/tr/product/_samsung-galaxy-a16-4-gb-128-gb-akilli-telefon-siyah-163468102.html",
@@ -4144,7 +4046,8 @@
         "installmentText": "Peşin Fiyatına 3 Taksit",
         "isOfficial": false
       }
-    ]
+    ],
+    "storesCount": 1
   },
   {
     "id": "phone-028",
@@ -4154,8 +4057,6 @@
     "brandSlug": "samsung",
     "image": "/images/phones/samsung-galaxy-a15.svg",
     "images": [
-      "/images/phones/samsung-galaxy-a15.svg",
-      "/images/phones/samsung-galaxy-a15.svg",
       "/images/phones/samsung-galaxy-a15.svg"
     ],
     "lowestPrice": 14999,
@@ -4284,7 +4185,8 @@
         "installmentText": "Peşin Fiyatına 3 Taksit",
         "isOfficial": false
       }
-    ]
+    ],
+    "storesCount": 1
   },
   {
     "id": "phone-029",
@@ -4294,8 +4196,6 @@
     "brandSlug": "samsung",
     "image": "/images/phones/samsung-galaxy-m55-5g.svg",
     "images": [
-      "/images/phones/samsung-galaxy-m55-5g.svg",
-      "/images/phones/samsung-galaxy-m55-5g.svg",
       "/images/phones/samsung-galaxy-m55-5g.svg"
     ],
     "lowestPrice": 0,
@@ -4409,7 +4309,8 @@
         "updatePolicy": "4-7 Yıl Resmi Güncelleme Garantisi"
       }
     },
-    "storesPrices": []
+    "storesPrices": [],
+    "storesCount": 0
   },
   {
     "id": "phone-030",
@@ -4419,12 +4320,10 @@
     "brandSlug": "xiaomi",
     "image": "/images/phones/xiaomi-15-pro.webp",
     "images": [
-      "/images/phones/xiaomi-15-pro.webp",
-      "/images/phones/xiaomi-15-pro.webp",
       "/images/phones/xiaomi-15-pro.webp"
     ],
     "lowestPrice": 44721,
-    "highestPrice": 47086,
+    "highestPrice": 44721,
     "sixMonthLowestPrice": 40851,
     "priceStore": "Mi Store (Xiaomi)",
     "priceUrl": "https://www.mi.com/tr/phone/",
@@ -4550,7 +4449,8 @@
         "isAvailable": true,
         "isOfficial": true
       }
-    ]
+    ],
+    "storesCount": 1
   },
   {
     "id": "phone-031",
@@ -4560,12 +4460,10 @@
     "brandSlug": "xiaomi",
     "image": "/images/phones/xiaomi-15.svg",
     "images": [
-      "/images/phones/xiaomi-15.svg",
-      "/images/phones/xiaomi-15.svg",
       "/images/phones/xiaomi-15.svg"
     ],
     "lowestPrice": 57999,
-    "highestPrice": 63509,
+    "highestPrice": 60319,
     "sixMonthLowestPrice": 55099,
     "priceStore": "Hepsiburada",
     "priceUrl": "https://www.hepsiburada.com/xiaomi-15-512-gb-12-gb-ram-xiaomi-turkiye-garantili-yesil-p-HBCV000084H2B3?magaza=CeSE%20Market",
@@ -4719,7 +4617,8 @@
         "isAvailable": true,
         "isOfficial": true
       }
-    ]
+    ],
+    "storesCount": 3
   },
   {
     "id": "phone-032",
@@ -4729,12 +4628,10 @@
     "brandSlug": "xiaomi",
     "image": "/images/phones/xiaomi-14t-pro.webp",
     "images": [
-      "/images/phones/xiaomi-14t-pro.webp",
-      "/images/phones/xiaomi-14t-pro.webp",
       "/images/phones/xiaomi-14t-pro.webp"
     ],
     "lowestPrice": 54999,
-    "highestPrice": 58818,
+    "highestPrice": 55864,
     "sixMonthLowestPrice": 51029,
     "priceStore": "MediaMarkt",
     "priceUrl": "https://www.mediamarkt.com.tr/tr/product/_xiaomi-14t-pro-12-gb-256-gb-akilli-telefon-mavi-166818093.html",
@@ -4874,7 +4771,8 @@
         "isAvailable": true,
         "isOfficial": true
       }
-    ]
+    ],
+    "storesCount": 2
   },
   {
     "id": "phone-033",
@@ -4884,12 +4782,10 @@
     "brandSlug": "xiaomi",
     "image": "/images/phones/xiaomi-14.webp",
     "images": [
-      "/images/phones/xiaomi-14.webp",
-      "/images/phones/xiaomi-14.webp",
       "/images/phones/xiaomi-14.webp"
     ],
     "lowestPrice": 33305,
-    "highestPrice": 35066,
+    "highestPrice": 33305,
     "sixMonthLowestPrice": 30423,
     "priceStore": "Mi Store (Xiaomi)",
     "priceUrl": "https://www.mi.com/tr/phone/",
@@ -5015,7 +4911,8 @@
         "isAvailable": true,
         "isOfficial": true
       }
-    ]
+    ],
+    "storesCount": 1
   },
   {
     "id": "phone-034",
@@ -5025,12 +4922,10 @@
     "brandSlug": "xiaomi",
     "image": "/images/phones/xiaomi-13-ultra.svg",
     "images": [
-      "/images/phones/xiaomi-13-ultra.svg",
-      "/images/phones/xiaomi-13-ultra.svg",
       "/images/phones/xiaomi-13-ultra.svg"
     ],
     "lowestPrice": 40577,
-    "highestPrice": 42723,
+    "highestPrice": 40577,
     "sixMonthLowestPrice": 37065,
     "priceStore": "Mi Store (Xiaomi)",
     "priceUrl": "https://www.mi.com/tr/phone/",
@@ -5156,7 +5051,8 @@
         "isAvailable": true,
         "isOfficial": true
       }
-    ]
+    ],
+    "storesCount": 1
   },
   {
     "id": "phone-035",
@@ -5166,12 +5062,10 @@
     "brandSlug": "xiaomi",
     "image": "/images/phones/xiaomi-mix-fold-4.svg",
     "images": [
-      "/images/phones/xiaomi-mix-fold-4.svg",
-      "/images/phones/xiaomi-mix-fold-4.svg",
       "/images/phones/xiaomi-mix-fold-4.svg"
     ],
     "lowestPrice": 67629,
-    "highestPrice": 71206,
+    "highestPrice": 67629,
     "sixMonthLowestPrice": 61777,
     "priceStore": "Mi Store (Xiaomi)",
     "priceUrl": "https://www.mi.com/tr/phone/",
@@ -5297,7 +5191,8 @@
         "isAvailable": true,
         "isOfficial": true
       }
-    ]
+    ],
+    "storesCount": 1
   },
   {
     "id": "phone-036",
@@ -5307,12 +5202,10 @@
     "brandSlug": "redmi",
     "image": "/images/phones/redmi-note-14-pro.svg",
     "images": [
-      "/images/phones/redmi-note-14-pro.svg",
-      "/images/phones/redmi-note-14-pro.svg",
       "/images/phones/redmi-note-14-pro.svg"
     ],
     "lowestPrice": 15775,
-    "highestPrice": 16609,
+    "highestPrice": 15775,
     "sixMonthLowestPrice": 14410,
     "priceStore": "Mi Store (Xiaomi)",
     "priceUrl": "https://www.mi.com/tr/phone/",
@@ -5438,7 +5331,8 @@
         "isAvailable": true,
         "isOfficial": true
       }
-    ]
+    ],
+    "storesCount": 1
   },
   {
     "id": "phone-037",
@@ -5448,12 +5342,10 @@
     "brandSlug": "redmi",
     "image": "/images/phones/redmi-note-13-pro-5g.webp",
     "images": [
-      "/images/phones/redmi-note-13-pro-5g.webp",
-      "/images/phones/redmi-note-13-pro-5g.webp",
       "/images/phones/redmi-note-13-pro-5g.webp"
     ],
     "lowestPrice": 14748,
-    "highestPrice": 15528,
+    "highestPrice": 14748,
     "sixMonthLowestPrice": 13472,
     "priceStore": "Mi Store (Xiaomi)",
     "priceUrl": "https://www.mi.com/tr/phone/",
@@ -5573,7 +5465,8 @@
         "isAvailable": true,
         "isOfficial": true
       }
-    ]
+    ],
+    "storesCount": 1
   },
   {
     "id": "phone-038",
@@ -5583,12 +5476,10 @@
     "brandSlug": "redmi",
     "image": "/images/phones/redmi-note-13-pro-5g.webp",
     "images": [
-      "/images/phones/redmi-note-13-pro-5g.webp",
-      "/images/phones/redmi-note-13-pro-5g.webp",
       "/images/phones/redmi-note-13-pro-5g.webp"
     ],
     "lowestPrice": 24499,
-    "highestPrice": 26826,
+    "highestPrice": 25479,
     "sixMonthLowestPrice": 23274,
     "priceStore": "MediaMarkt",
     "priceUrl": "https://www.mediamarkt.com.tr/tr/product/_xiaomi-redmi-note-13-pro-8-gb-256-gb-akilli-telefon-mor-150563509.html",
@@ -5722,7 +5613,8 @@
         "isAvailable": true,
         "isOfficial": true
       }
-    ]
+    ],
+    "storesCount": 2
   },
   {
     "id": "phone-039",
@@ -5732,12 +5624,10 @@
     "brandSlug": "redmi",
     "image": "/images/phones/redmi-note-13.svg",
     "images": [
-      "/images/phones/redmi-note-13.svg",
-      "/images/phones/redmi-note-13.svg",
       "/images/phones/redmi-note-13.svg"
     ],
     "lowestPrice": 14227,
-    "highestPrice": 14980,
+    "highestPrice": 14227,
     "sixMonthLowestPrice": 12996,
     "priceStore": "Mi Store (Xiaomi)",
     "priceUrl": "https://www.mi.com/tr/phone/",
@@ -5857,7 +5747,8 @@
         "isAvailable": true,
         "isOfficial": true
       }
-    ]
+    ],
+    "storesCount": 1
   },
   {
     "id": "phone-040",
@@ -5867,12 +5758,10 @@
     "brandSlug": "redmi",
     "image": "/images/phones/redmi-k80-pro.svg",
     "images": [
-      "/images/phones/redmi-k80-pro.svg",
-      "/images/phones/redmi-k80-pro.svg",
       "/images/phones/redmi-k80-pro.svg"
     ],
     "lowestPrice": 29161,
-    "highestPrice": 30703,
+    "highestPrice": 29161,
     "sixMonthLowestPrice": 26637,
     "priceStore": "Mi Store (Xiaomi)",
     "priceUrl": "https://www.mi.com/tr/phone/",
@@ -5998,7 +5887,8 @@
         "isAvailable": true,
         "isOfficial": true
       }
-    ]
+    ],
+    "storesCount": 1
   },
   {
     "id": "phone-041",
@@ -6008,12 +5898,10 @@
     "brandSlug": "poco",
     "image": "/images/phones/poco-f6-pro.webp",
     "images": [
-      "/images/phones/poco-f6-pro.webp",
-      "/images/phones/poco-f6-pro.webp",
       "/images/phones/poco-f6-pro.webp"
     ],
     "lowestPrice": 26033,
-    "highestPrice": 27410,
+    "highestPrice": 26033,
     "sixMonthLowestPrice": 23780,
     "priceStore": "Mi Store (Xiaomi)",
     "priceUrl": "https://www.mi.com/tr/phone/",
@@ -6133,7 +6021,8 @@
         "isAvailable": true,
         "isOfficial": true
       }
-    ]
+    ],
+    "storesCount": 1
   },
   {
     "id": "phone-042",
@@ -6143,12 +6032,10 @@
     "brandSlug": "poco",
     "image": "/images/phones/poco-x6-pro.webp",
     "images": [
-      "/images/phones/poco-x6-pro.webp",
-      "/images/phones/poco-x6-pro.webp",
       "/images/phones/poco-x6-pro.webp"
     ],
     "lowestPrice": 39999,
-    "highestPrice": 43799,
+    "highestPrice": 41599,
     "sixMonthLowestPrice": 37999,
     "priceStore": "MediaMarkt",
     "priceUrl": "https://www.mediamarkt.com.tr/tr/product/_poco-x6-pro-8-gb-256-gb-akilli-telefon-siyah-142988315.html",
@@ -6282,7 +6169,8 @@
         "isAvailable": true,
         "isOfficial": true
       }
-    ]
+    ],
+    "storesCount": 2
   },
   {
     "id": "phone-043",
@@ -6292,12 +6180,10 @@
     "brandSlug": "poco",
     "image": "/images/phones/poco-f7-pro.svg",
     "images": [
-      "/images/phones/poco-f7-pro.svg",
-      "/images/phones/poco-f7-pro.svg",
       "/images/phones/poco-f7-pro.svg"
     ],
     "lowestPrice": 30178,
-    "highestPrice": 31774,
+    "highestPrice": 30178,
     "sixMonthLowestPrice": 27566,
     "priceStore": "Mi Store (Xiaomi)",
     "priceUrl": "https://www.mi.com/tr/phone/",
@@ -6423,7 +6309,8 @@
         "isAvailable": true,
         "isOfficial": true
       }
-    ]
+    ],
+    "storesCount": 1
   },
   {
     "id": "phone-044",
@@ -6433,12 +6320,10 @@
     "brandSlug": "poco",
     "image": "/images/phones/poco-m6-pro.svg",
     "images": [
-      "/images/phones/poco-m6-pro.svg",
-      "/images/phones/poco-m6-pro.svg",
       "/images/phones/poco-m6-pro.svg"
     ],
     "lowestPrice": 9380,
-    "highestPrice": 9876,
+    "highestPrice": 9380,
     "sixMonthLowestPrice": 8568,
     "priceStore": "Mi Store (Xiaomi)",
     "priceUrl": "https://www.mi.com/tr/phone/",
@@ -6558,7 +6443,8 @@
         "isAvailable": true,
         "isOfficial": true
       }
-    ]
+    ],
+    "storesCount": 1
   },
   {
     "id": "phone-045",
@@ -6568,8 +6454,6 @@
     "brandSlug": "honor",
     "image": "/images/phones/honor-magic-6-pro.webp",
     "images": [
-      "/images/phones/honor-magic-6-pro.webp",
-      "/images/phones/honor-magic-6-pro.webp",
       "/images/phones/honor-magic-6-pro.webp"
     ],
     "lowestPrice": 59499,
@@ -6727,7 +6611,8 @@
         "installmentText": "Peşin Fiyatına 3 Taksit",
         "isOfficial": false
       }
-    ]
+    ],
+    "storesCount": 3
   },
   {
     "id": "phone-046",
@@ -6737,12 +6622,10 @@
     "brandSlug": "honor",
     "image": "/images/phones/honor-magic-7-pro.svg",
     "images": [
-      "/images/phones/honor-magic-7-pro.svg",
-      "/images/phones/honor-magic-7-pro.svg",
       "/images/phones/honor-magic-7-pro.svg"
     ],
     "lowestPrice": 57230,
-    "highestPrice": 60257,
+    "highestPrice": 57230,
     "sixMonthLowestPrice": 52278,
     "priceStore": "Honor",
     "priceUrl": "https://www.honor.com/tr/phones/",
@@ -6868,7 +6751,8 @@
         "isAvailable": true,
         "isOfficial": true
       }
-    ]
+    ],
+    "storesCount": 1
   },
   {
     "id": "phone-047",
@@ -6878,12 +6762,10 @@
     "brandSlug": "honor",
     "image": "/images/phones/honor-magic-v3.svg",
     "images": [
-      "/images/phones/honor-magic-v3.svg",
-      "/images/phones/honor-magic-v3.svg",
       "/images/phones/honor-magic-v3.svg"
     ],
     "lowestPrice": 78028,
-    "highestPrice": 82155,
+    "highestPrice": 78028,
     "sixMonthLowestPrice": 71276,
     "priceStore": "Honor",
     "priceUrl": "https://www.honor.com/tr/phones/",
@@ -7009,7 +6891,8 @@
         "isAvailable": true,
         "isOfficial": true
       }
-    ]
+    ],
+    "storesCount": 1
   },
   {
     "id": "phone-048",
@@ -7019,12 +6902,10 @@
     "brandSlug": "honor",
     "image": "/images/phones/honor-200-pro.svg",
     "images": [
-      "/images/phones/honor-200-pro.svg",
-      "/images/phones/honor-200-pro.svg",
       "/images/phones/honor-200-pro.svg"
     ],
     "lowestPrice": 29161,
-    "highestPrice": 30703,
+    "highestPrice": 29161,
     "sixMonthLowestPrice": 26637,
     "priceStore": "Honor",
     "priceUrl": "https://www.honor.com/tr/phones/",
@@ -7150,7 +7031,8 @@
         "isAvailable": true,
         "isOfficial": true
       }
-    ]
+    ],
+    "storesCount": 1
   },
   {
     "id": "phone-049",
@@ -7160,12 +7042,10 @@
     "brandSlug": "honor",
     "image": "/images/phones/honor-x9b-5g.svg",
     "images": [
-      "/images/phones/honor-x9b-5g.svg",
-      "/images/phones/honor-x9b-5g.svg",
       "/images/phones/honor-x9b-5g.svg"
     ],
     "lowestPrice": 29999,
-    "highestPrice": 32576,
+    "highestPrice": 30940,
     "sixMonthLowestPrice": 28263,
     "priceStore": "MediaMarkt",
     "priceUrl": "https://www.mediamarkt.com.tr/tr/product/_honor-x9b-5g-12-gb-256-gb-akilli-telefon-yesil-169517252.html",
@@ -7299,7 +7179,8 @@
         "isAvailable": true,
         "isOfficial": true
       }
-    ]
+    ],
+    "storesCount": 2
   },
   {
     "id": "phone-050",
@@ -7309,15 +7190,13 @@
     "brandSlug": "huawei",
     "image": "/images/phones/huawei-pura-70-ultra.webp",
     "images": [
-      "/images/phones/huawei-pura-70-ultra.webp",
-      "/images/phones/huawei-pura-70-ultra.webp",
       "/images/phones/huawei-pura-70-ultra.webp"
     ],
-    "lowestPrice": 57199,
-    "highestPrice": 67941.09,
+    "lowestPrice": 57899,
+    "highestPrice": 59201,
     "sixMonthLowestPrice": 54339,
-    "priceStore": "Trendyol",
-    "priceUrl": "https://www.trendyol.com/huawei/pura-70-ultra-16-gb-ram-512-gb-yesil-p-834192206?merchantId=593507",
+    "priceStore": "Hepsiburada",
+    "priceUrl": "https://www.hepsiburada.com/huawei-pura-70-ultra-16-512gb-yesil-huawei-turkiye-garantili-p-HBCV00006C4Q4E?magaza=Northa%C5%9F",
     "releaseDate": "2024-10-15T00:00:00Z",
     "isNew": true,
     "isPriceDropped": true,
@@ -7432,20 +7311,6 @@
     },
     "storesPrices": [
       {
-        "store": "Trendyol",
-        "storeSlug": "trendyol",
-        "sellerName": "Trendyol Doğrulanmış Satıcı",
-        "sellerRating": 9.8,
-        "price": 57199,
-        "url": "https://www.trendyol.com/huawei/pura-70-ultra-16-gb-ram-512-gb-yesil-p-834192206?merchantId=593507",
-        "isAvailable": true,
-        "lastUpdated": "2026-11-05T06:21:20.073Z",
-        "shippingText": "Hızlı Teslimat • Ücretsiz Kargo",
-        "guaranteeText": "2 Yıl Resmi Distribütör Garantili",
-        "installmentText": "Peşin Fiyatına 3 Taksit",
-        "isOfficial": true
-      },
-      {
         "store": "Hepsiburada",
         "storeSlug": "hepsiburada",
         "sellerName": "Hepsiburada Resmi",
@@ -7468,7 +7333,8 @@
         "isAvailable": true,
         "isOfficial": true
       }
-    ]
+    ],
+    "storesCount": 2
   },
   {
     "id": "phone-051",
@@ -7478,12 +7344,10 @@
     "brandSlug": "huawei",
     "image": "/images/phones/huawei-mate-xt-ultimate.svg",
     "images": [
-      "/images/phones/huawei-mate-xt-ultimate.svg",
-      "/images/phones/huawei-mate-xt-ultimate.svg",
       "/images/phones/huawei-mate-xt-ultimate.svg"
     ],
     "lowestPrice": 144959,
-    "highestPrice": 153362,
+    "highestPrice": 144959,
     "sixMonthLowestPrice": 133054,
     "priceStore": "Huawei Store",
     "priceUrl": "https://consumer.huawei.com/tr/phones/",
@@ -7609,7 +7473,8 @@
         "isAvailable": true,
         "isOfficial": true
       }
-    ]
+    ],
+    "storesCount": 1
   },
   {
     "id": "phone-052",
@@ -7619,12 +7484,10 @@
     "brandSlug": "huawei",
     "image": "/images/phones/huawei-nova-12-pro.svg",
     "images": [
-      "/images/phones/huawei-nova-12-pro.svg",
-      "/images/phones/huawei-nova-12-pro.svg",
       "/images/phones/huawei-nova-12-pro.svg"
     ],
     "lowestPrice": 35999,
-    "highestPrice": 39563,
+    "highestPrice": 37259,
     "sixMonthLowestPrice": 34199,
     "priceStore": "MediaMarkt",
     "priceUrl": "https://www.mediamarkt.com.tr/tr/product/_huawei-nova-13-pro-12512-gb-akilli-telefon-siyah-1244457.html",
@@ -7758,7 +7621,8 @@
         "isAvailable": true,
         "isOfficial": true
       }
-    ]
+    ],
+    "storesCount": 2
   },
   {
     "id": "phone-053",
@@ -7768,8 +7632,6 @@
     "brandSlug": "oppo",
     "image": "/images/phones/oppo-find-x8-pro.webp",
     "images": [
-      "/images/phones/oppo-find-x8-pro.webp",
-      "/images/phones/oppo-find-x8-pro.webp",
       "/images/phones/oppo-find-x8-pro.webp"
     ],
     "lowestPrice": 0,
@@ -7889,7 +7751,8 @@
         "updatePolicy": "4-7 Yıl Resmi Güncelleme Garantisi"
       }
     },
-    "storesPrices": []
+    "storesPrices": [],
+    "storesCount": 0
   },
   {
     "id": "phone-054",
@@ -7899,12 +7762,10 @@
     "brandSlug": "oppo",
     "image": "/images/phones/oppo-reno-12-pro-5g.svg",
     "images": [
-      "/images/phones/oppo-reno-12-pro-5g.svg",
-      "/images/phones/oppo-reno-12-pro-5g.svg",
       "/images/phones/oppo-reno-12-pro-5g.svg"
     ],
     "lowestPrice": 61999,
-    "highestPrice": 67889,
+    "highestPrice": 61999,
     "sixMonthLowestPrice": 58899,
     "priceStore": "MediaMarkt",
     "priceUrl": "https://www.mediamarkt.com.tr/tr/product/_oppo-reno-15-pro-5g-12512-gb-akilli-telefon-alacakaranlik-kahvesi-1251778.html",
@@ -8035,7 +7896,8 @@
         "installmentText": "Peşin Fiyatına 3 Taksit",
         "isOfficial": false
       }
-    ]
+    ],
+    "storesCount": 1
   },
   {
     "id": "phone-055",
@@ -8045,8 +7907,6 @@
     "brandSlug": "oppo",
     "image": "/images/phones/oppo-reno-11-pro-5g.svg",
     "images": [
-      "/images/phones/oppo-reno-11-pro-5g.svg",
-      "/images/phones/oppo-reno-11-pro-5g.svg",
       "/images/phones/oppo-reno-11-pro-5g.svg"
     ],
     "lowestPrice": 0,
@@ -8166,7 +8026,8 @@
         "updatePolicy": "4-7 Yıl Resmi Güncelleme Garantisi"
       }
     },
-    "storesPrices": []
+    "storesPrices": [],
+    "storesCount": 0
   },
   {
     "id": "phone-056",
@@ -8176,15 +8037,13 @@
     "brandSlug": "vivo",
     "image": "/images/phones/vivo-x200-pro.svg",
     "images": [
-      "/images/phones/vivo-x200-pro.svg",
-      "/images/phones/vivo-x200-pro.svg",
       "/images/phones/vivo-x200-pro.svg"
     ],
-    "lowestPrice": 64499,
-    "highestPrice": 70626,
+    "lowestPrice": 64999,
+    "highestPrice": 64999,
     "sixMonthLowestPrice": 61274,
-    "priceStore": "Trendyol",
-    "priceUrl": "https://www.trendyol.com/vivo/x200-pro-16-512gb-akilli-telefon-titanyum-gri-p-895987838?merchantId=746248",
+    "priceStore": "Hepsiburada",
+    "priceUrl": "https://www.hepsiburada.com/vivo-x200-pro-512-gb-16gb-ram-akilli-telefon-titanyum-gri-vivo-turkiye-garantili-p-HBCV00007MWSGH?magaza=Vika%20Market",
     "releaseDate": "2024-10-15T00:00:00Z",
     "isNew": true,
     "isPriceDropped": true,
@@ -8299,20 +8158,6 @@
     },
     "storesPrices": [
       {
-        "store": "Trendyol",
-        "storeSlug": "trendyol",
-        "sellerName": "Trendyol Doğrulanmış Satıcı",
-        "sellerRating": 9.8,
-        "price": 64499,
-        "url": "https://www.trendyol.com/vivo/x200-pro-16-512gb-akilli-telefon-titanyum-gri-p-895987838?merchantId=746248",
-        "isAvailable": true,
-        "lastUpdated": "2026-11-05T06:21:20.075Z",
-        "shippingText": "Hızlı Teslimat • Ücretsiz Kargo",
-        "guaranteeText": "2 Yıl Resmi Distribütör Garantili",
-        "installmentText": "Peşin Fiyatına 3 Taksit",
-        "isOfficial": true
-      },
-      {
         "store": "Hepsiburada",
         "storeSlug": "hepsiburada",
         "sellerName": "Hepsiburada Resmi",
@@ -8326,7 +8171,8 @@
         "installmentText": "Peşin Fiyatına 3 Taksit",
         "isOfficial": false
       }
-    ]
+    ],
+    "storesCount": 1
   },
   {
     "id": "phone-057",
@@ -8336,8 +8182,6 @@
     "brandSlug": "vivo",
     "image": "/images/phones/vivo-x100-pro.webp",
     "images": [
-      "/images/phones/vivo-x100-pro.webp",
-      "/images/phones/vivo-x100-pro.webp",
       "/images/phones/vivo-x100-pro.webp"
     ],
     "lowestPrice": 0,
@@ -8457,7 +8301,8 @@
         "updatePolicy": "4-7 Yıl Resmi Güncelleme Garantisi"
       }
     },
-    "storesPrices": []
+    "storesPrices": [],
+    "storesCount": 0
   },
   {
     "id": "phone-058",
@@ -8467,8 +8312,6 @@
     "brandSlug": "vivo",
     "image": "/images/phones/vivo-v40-5g.svg",
     "images": [
-      "/images/phones/vivo-v40-5g.svg",
-      "/images/phones/vivo-v40-5g.svg",
       "/images/phones/vivo-v40-5g.svg"
     ],
     "lowestPrice": 0,
@@ -8582,7 +8425,8 @@
         "updatePolicy": "4-7 Yıl Resmi Güncelleme Garantisi"
       }
     },
-    "storesPrices": []
+    "storesPrices": [],
+    "storesCount": 0
   },
   {
     "id": "phone-059",
@@ -8592,8 +8436,6 @@
     "brandSlug": "vivo",
     "image": "/images/phones/vivo-v30-5g.svg",
     "images": [
-      "/images/phones/vivo-v30-5g.svg",
-      "/images/phones/vivo-v30-5g.svg",
       "/images/phones/vivo-v30-5g.svg"
     ],
     "lowestPrice": 0,
@@ -8707,7 +8549,8 @@
         "updatePolicy": "4-7 Yıl Resmi Güncelleme Garantisi"
       }
     },
-    "storesPrices": []
+    "storesPrices": [],
+    "storesCount": 0
   },
   {
     "id": "phone-060",
@@ -8717,8 +8560,6 @@
     "brandSlug": "realme",
     "image": "/images/phones/realme-gt-7-pro.svg",
     "images": [
-      "/images/phones/realme-gt-7-pro.svg",
-      "/images/phones/realme-gt-7-pro.svg",
       "/images/phones/realme-gt-7-pro.svg"
     ],
     "lowestPrice": 0,
@@ -8838,7 +8679,8 @@
         "updatePolicy": "4-7 Yıl Resmi Güncelleme Garantisi"
       }
     },
-    "storesPrices": []
+    "storesPrices": [],
+    "storesCount": 0
   },
   {
     "id": "phone-061",
@@ -8848,8 +8690,6 @@
     "brandSlug": "realme",
     "image": "/images/phones/realme-gt-6.webp",
     "images": [
-      "/images/phones/realme-gt-6.webp",
-      "/images/phones/realme-gt-6.webp",
       "/images/phones/realme-gt-6.webp"
     ],
     "lowestPrice": 0,
@@ -8969,7 +8809,8 @@
         "updatePolicy": "4-7 Yıl Resmi Güncelleme Garantisi"
       }
     },
-    "storesPrices": []
+    "storesPrices": [],
+    "storesCount": 0
   },
   {
     "id": "phone-062",
@@ -8979,8 +8820,6 @@
     "brandSlug": "realme",
     "image": "/images/phones/realme-12-pro-5g.svg",
     "images": [
-      "/images/phones/realme-12-pro-5g.svg",
-      "/images/phones/realme-12-pro-5g.svg",
       "/images/phones/realme-12-pro-5g.svg"
     ],
     "lowestPrice": 0,
@@ -9100,7 +8939,8 @@
         "updatePolicy": "4-7 Yıl Resmi Güncelleme Garantisi"
       }
     },
-    "storesPrices": []
+    "storesPrices": [],
+    "storesCount": 0
   },
   {
     "id": "phone-063",
@@ -9110,8 +8950,6 @@
     "brandSlug": "realme",
     "image": "/images/phones/realme-c67.webp",
     "images": [
-      "/images/phones/realme-c67.webp",
-      "/images/phones/realme-c67.webp",
       "/images/phones/realme-c67.webp"
     ],
     "lowestPrice": 0,
@@ -9220,7 +9058,8 @@
         "updatePolicy": "4-7 Yıl Resmi Güncelleme Garantisi"
       }
     },
-    "storesPrices": []
+    "storesPrices": [],
+    "storesCount": 0
   },
   {
     "id": "phone-064",
@@ -9230,8 +9069,6 @@
     "brandSlug": "oneplus",
     "image": "/images/phones/oneplus-13.svg",
     "images": [
-      "/images/phones/oneplus-13.svg",
-      "/images/phones/oneplus-13.svg",
       "/images/phones/oneplus-13.svg"
     ],
     "lowestPrice": 0,
@@ -9351,7 +9188,8 @@
         "updatePolicy": "4-7 Yıl Resmi Güncelleme Garantisi"
       }
     },
-    "storesPrices": []
+    "storesPrices": [],
+    "storesCount": 0
   },
   {
     "id": "phone-065",
@@ -9361,8 +9199,6 @@
     "brandSlug": "oneplus",
     "image": "/images/phones/oneplus-12.webp",
     "images": [
-      "/images/phones/oneplus-12.webp",
-      "/images/phones/oneplus-12.webp",
       "/images/phones/oneplus-12.webp"
     ],
     "lowestPrice": 0,
@@ -9482,7 +9318,8 @@
         "updatePolicy": "4-7 Yıl Resmi Güncelleme Garantisi"
       }
     },
-    "storesPrices": []
+    "storesPrices": [],
+    "storesCount": 0
   },
   {
     "id": "phone-066",
@@ -9492,8 +9329,6 @@
     "brandSlug": "oneplus",
     "image": "/images/phones/oneplus-nord-4.svg",
     "images": [
-      "/images/phones/oneplus-nord-4.svg",
-      "/images/phones/oneplus-nord-4.svg",
       "/images/phones/oneplus-nord-4.svg"
     ],
     "lowestPrice": 0,
@@ -9607,7 +9442,8 @@
         "updatePolicy": "4-7 Yıl Resmi Güncelleme Garantisi"
       }
     },
-    "storesPrices": []
+    "storesPrices": [],
+    "storesCount": 0
   },
   {
     "id": "phone-067",
@@ -9617,8 +9453,6 @@
     "brandSlug": "oneplus",
     "image": "/images/phones/oneplus-open.svg",
     "images": [
-      "/images/phones/oneplus-open.svg",
-      "/images/phones/oneplus-open.svg",
       "/images/phones/oneplus-open.svg"
     ],
     "lowestPrice": 0,
@@ -9738,7 +9572,8 @@
         "updatePolicy": "4-7 Yıl Resmi Güncelleme Garantisi"
       }
     },
-    "storesPrices": []
+    "storesPrices": [],
+    "storesCount": 0
   },
   {
     "id": "phone-068",
@@ -9748,8 +9583,6 @@
     "brandSlug": "motorola",
     "image": "/images/phones/motorola-edge-50-ultra.svg",
     "images": [
-      "/images/phones/motorola-edge-50-ultra.svg",
-      "/images/phones/motorola-edge-50-ultra.svg",
       "/images/phones/motorola-edge-50-ultra.svg"
     ],
     "lowestPrice": 0,
@@ -9869,7 +9702,8 @@
         "updatePolicy": "4-7 Yıl Resmi Güncelleme Garantisi"
       }
     },
-    "storesPrices": []
+    "storesPrices": [],
+    "storesCount": 0
   },
   {
     "id": "phone-069",
@@ -9879,8 +9713,6 @@
     "brandSlug": "motorola",
     "image": "/images/phones/motorola-razr-50-ultra.svg",
     "images": [
-      "/images/phones/motorola-razr-50-ultra.svg",
-      "/images/phones/motorola-razr-50-ultra.svg",
       "/images/phones/motorola-razr-50-ultra.svg"
     ],
     "lowestPrice": 0,
@@ -9995,7 +9827,8 @@
         "updatePolicy": "4-7 Yıl Resmi Güncelleme Garantisi"
       }
     },
-    "storesPrices": []
+    "storesPrices": [],
+    "storesCount": 0
   },
   {
     "id": "phone-070",
@@ -10005,8 +9838,6 @@
     "brandSlug": "motorola",
     "image": "/images/phones/motorola-moto-g85-5g.svg",
     "images": [
-      "/images/phones/motorola-moto-g85-5g.svg",
-      "/images/phones/motorola-moto-g85-5g.svg",
       "/images/phones/motorola-moto-g85-5g.svg"
     ],
     "lowestPrice": 0,
@@ -10120,7 +9951,8 @@
         "updatePolicy": "4-7 Yıl Resmi Güncelleme Garantisi"
       }
     },
-    "storesPrices": []
+    "storesPrices": [],
+    "storesCount": 0
   },
   {
     "id": "phone-071",
@@ -10130,12 +9962,10 @@
     "brandSlug": "nothing",
     "image": "/images/phones/nothing-phone-2.webp",
     "images": [
-      "/images/phones/nothing-phone-2.webp",
-      "/images/phones/nothing-phone-2.webp",
       "/images/phones/nothing-phone-2.webp"
     ],
     "lowestPrice": 29998,
-    "highestPrice": 32848,
+    "highestPrice": 29998,
     "sixMonthLowestPrice": 28498,
     "priceStore": "MediaMarkt",
     "priceUrl": "https://www.mediamarkt.com.tr/tr/product/_nothing-phone-3a-8-gb-128-gb-akilli-telefon-beyaz-150876644.html",
@@ -10260,7 +10090,8 @@
         "installmentText": "Peşin Fiyatına 3 Taksit",
         "isOfficial": false
       }
-    ]
+    ],
+    "storesCount": 1
   },
   {
     "id": "phone-072",
@@ -10270,8 +10101,6 @@
     "brandSlug": "nothing",
     "image": "/images/phones/nothing-phone-2a-plus.svg",
     "images": [
-      "/images/phones/nothing-phone-2a-plus.svg",
-      "/images/phones/nothing-phone-2a-plus.svg",
       "/images/phones/nothing-phone-2a-plus.svg"
     ],
     "lowestPrice": 0,
@@ -10385,7 +10214,8 @@
         "updatePolicy": "4-7 Yıl Resmi Güncelleme Garantisi"
       }
     },
-    "storesPrices": []
+    "storesPrices": [],
+    "storesCount": 0
   },
   {
     "id": "phone-073",
@@ -10395,8 +10225,6 @@
     "brandSlug": "cmf",
     "image": "/images/phones/cmf-phone-1.svg",
     "images": [
-      "/images/phones/cmf-phone-1.svg",
-      "/images/phones/cmf-phone-1.svg",
       "/images/phones/cmf-phone-1.svg"
     ],
     "lowestPrice": 20999,
@@ -10520,7 +10348,8 @@
         "installmentText": "Peşin Fiyatına 3 Taksit",
         "isOfficial": false
       }
-    ]
+    ],
+    "storesCount": 1
   },
   {
     "id": "phone-074",
@@ -10530,8 +10359,6 @@
     "brandSlug": "google",
     "image": "/images/phones/google-pixel-9-pro-xl.webp",
     "images": [
-      "/images/phones/google-pixel-9-pro-xl.webp",
-      "/images/phones/google-pixel-9-pro-xl.webp",
       "/images/phones/google-pixel-9-pro-xl.webp"
     ],
     "lowestPrice": 0,
@@ -10651,7 +10478,8 @@
         "updatePolicy": "4-7 Yıl Resmi Güncelleme Garantisi"
       }
     },
-    "storesPrices": []
+    "storesPrices": [],
+    "storesCount": 0
   },
   {
     "id": "phone-075",
@@ -10661,8 +10489,6 @@
     "brandSlug": "google",
     "image": "/images/phones/google-pixel-8-pro.svg",
     "images": [
-      "/images/phones/google-pixel-8-pro.svg",
-      "/images/phones/google-pixel-8-pro.svg",
       "/images/phones/google-pixel-8-pro.svg"
     ],
     "lowestPrice": 0,
@@ -10782,7 +10608,8 @@
         "updatePolicy": "4-7 Yıl Resmi Güncelleme Garantisi"
       }
     },
-    "storesPrices": []
+    "storesPrices": [],
+    "storesCount": 0
   },
   {
     "id": "phone-076",
@@ -10792,8 +10619,6 @@
     "brandSlug": "google",
     "image": "/images/phones/google-pixel-8a.svg",
     "images": [
-      "/images/phones/google-pixel-8a.svg",
-      "/images/phones/google-pixel-8a.svg",
       "/images/phones/google-pixel-8a.svg"
     ],
     "lowestPrice": 0,
@@ -10907,7 +10732,8 @@
         "updatePolicy": "4-7 Yıl Resmi Güncelleme Garantisi"
       }
     },
-    "storesPrices": []
+    "storesPrices": [],
+    "storesCount": 0
   },
   {
     "id": "phone-077",
@@ -10917,8 +10743,6 @@
     "brandSlug": "sony",
     "image": "/images/phones/sony-xperia-1-vi.svg",
     "images": [
-      "/images/phones/sony-xperia-1-vi.svg",
-      "/images/phones/sony-xperia-1-vi.svg",
       "/images/phones/sony-xperia-1-vi.svg"
     ],
     "lowestPrice": 0,
@@ -11038,7 +10862,8 @@
         "updatePolicy": "4-7 Yıl Resmi Güncelleme Garantisi"
       }
     },
-    "storesPrices": []
+    "storesPrices": [],
+    "storesCount": 0
   },
   {
     "id": "phone-078",
@@ -11048,8 +10873,6 @@
     "brandSlug": "sony",
     "image": "/images/phones/sony-xperia-10-vi.svg",
     "images": [
-      "/images/phones/sony-xperia-10-vi.svg",
-      "/images/phones/sony-xperia-10-vi.svg",
       "/images/phones/sony-xperia-10-vi.svg"
     ],
     "lowestPrice": 0,
@@ -11163,7 +10986,8 @@
         "updatePolicy": "4-7 Yıl Resmi Güncelleme Garantisi"
       }
     },
-    "storesPrices": []
+    "storesPrices": [],
+    "storesCount": 0
   },
   {
     "id": "phone-079",
@@ -11173,8 +10997,6 @@
     "brandSlug": "asus",
     "image": "/images/phones/asus-rog-phone-8-pro.svg",
     "images": [
-      "/images/phones/asus-rog-phone-8-pro.svg",
-      "/images/phones/asus-rog-phone-8-pro.svg",
       "/images/phones/asus-rog-phone-8-pro.svg"
     ],
     "lowestPrice": 0,
@@ -11294,7 +11116,8 @@
         "updatePolicy": "4-7 Yıl Resmi Güncelleme Garantisi"
       }
     },
-    "storesPrices": []
+    "storesPrices": [],
+    "storesCount": 0
   },
   {
     "id": "phone-080",
@@ -11304,8 +11127,6 @@
     "brandSlug": "asus",
     "image": "/images/phones/asus-zenfone-11-ultra.svg",
     "images": [
-      "/images/phones/asus-zenfone-11-ultra.svg",
-      "/images/phones/asus-zenfone-11-ultra.svg",
       "/images/phones/asus-zenfone-11-ultra.svg"
     ],
     "lowestPrice": 0,
@@ -11425,7 +11246,8 @@
         "updatePolicy": "4-7 Yıl Resmi Güncelleme Garantisi"
       }
     },
-    "storesPrices": []
+    "storesPrices": [],
+    "storesCount": 0
   },
   {
     "id": "phone-081",
@@ -11435,8 +11257,6 @@
     "brandSlug": "redmagic",
     "image": "/images/phones/redmagic-9s-pro.svg",
     "images": [
-      "/images/phones/redmagic-9s-pro.svg",
-      "/images/phones/redmagic-9s-pro.svg",
       "/images/phones/redmagic-9s-pro.svg"
     ],
     "lowestPrice": 0,
@@ -11550,7 +11370,8 @@
         "updatePolicy": "4-7 Yıl Resmi Güncelleme Garantisi"
       }
     },
-    "storesPrices": []
+    "storesPrices": [],
+    "storesCount": 0
   },
   {
     "id": "phone-082",
@@ -11560,8 +11381,6 @@
     "brandSlug": "nubia",
     "image": "/images/phones/nubia-z60-ultra.svg",
     "images": [
-      "/images/phones/nubia-z60-ultra.svg",
-      "/images/phones/nubia-z60-ultra.svg",
       "/images/phones/nubia-z60-ultra.svg"
     ],
     "lowestPrice": 0,
@@ -11681,7 +11500,8 @@
         "updatePolicy": "4-7 Yıl Resmi Güncelleme Garantisi"
       }
     },
-    "storesPrices": []
+    "storesPrices": [],
+    "storesCount": 0
   },
   {
     "id": "phone-083",
@@ -11691,8 +11511,6 @@
     "brandSlug": "nubia",
     "image": "/images/phones/nubia-focus-pro-5g.svg",
     "images": [
-      "/images/phones/nubia-focus-pro-5g.svg",
-      "/images/phones/nubia-focus-pro-5g.svg",
       "/images/phones/nubia-focus-pro-5g.svg"
     ],
     "lowestPrice": 0,
@@ -11801,7 +11619,8 @@
         "updatePolicy": "4-7 Yıl Resmi Güncelleme Garantisi"
       }
     },
-    "storesPrices": []
+    "storesPrices": [],
+    "storesCount": 0
   },
   {
     "id": "phone-084",
@@ -11811,8 +11630,6 @@
     "brandSlug": "zte",
     "image": "/images/phones/zte-blade-v50-design.svg",
     "images": [
-      "/images/phones/zte-blade-v50-design.svg",
-      "/images/phones/zte-blade-v50-design.svg",
       "/images/phones/zte-blade-v50-design.svg"
     ],
     "lowestPrice": 0,
@@ -11921,7 +11738,8 @@
         "updatePolicy": "4-7 Yıl Resmi Güncelleme Garantisi"
       }
     },
-    "storesPrices": []
+    "storesPrices": [],
+    "storesCount": 0
   },
   {
     "id": "phone-085",
@@ -11931,12 +11749,10 @@
     "brandSlug": "tecno",
     "image": "/images/phones/tecno-camon-30-premier-5g.svg",
     "images": [
-      "/images/phones/tecno-camon-30-premier-5g.svg",
-      "/images/phones/tecno-camon-30-premier-5g.svg",
       "/images/phones/tecno-camon-30-premier-5g.svg"
     ],
     "lowestPrice": 26158,
-    "highestPrice": 27410,
+    "highestPrice": 26158,
     "sixMonthLowestPrice": 23780,
     "priceStore": "Tecno",
     "priceUrl": "https://www.tecno-mobile.com/tr/phones/",
@@ -12062,7 +11878,8 @@
         "isAvailable": true,
         "isOfficial": true
       }
-    ]
+    ],
+    "storesCount": 1
   },
   {
     "id": "phone-086",
@@ -12072,12 +11889,10 @@
     "brandSlug": "tecno",
     "image": "/images/phones/tecno-spark-20-pro.svg",
     "images": [
-      "/images/phones/tecno-spark-20-pro.svg",
-      "/images/phones/tecno-spark-20-pro.svg",
       "/images/phones/tecno-spark-20-pro.svg"
     ],
     "lowestPrice": 16399,
-    "highestPrice": 17726,
+    "highestPrice": 16916,
     "sixMonthLowestPrice": 15379,
     "priceStore": "MediaMarkt",
     "priceUrl": "https://www.mediamarkt.com.tr/tr/product/_tecno-spark-20-pro-plus-8-gb-256-gb-akilli-telefon-siyah-168383032.html",
@@ -12206,7 +12021,8 @@
         "isAvailable": true,
         "isOfficial": true
       }
-    ]
+    ],
+    "storesCount": 2
   },
   {
     "id": "phone-087",
@@ -12216,12 +12032,10 @@
     "brandSlug": "infinix",
     "image": "/images/phones/infinix-gt-20-pro-5g.svg",
     "images": [
-      "/images/phones/infinix-gt-20-pro-5g.svg",
-      "/images/phones/infinix-gt-20-pro-5g.svg",
       "/images/phones/infinix-gt-20-pro-5g.svg"
     ],
     "lowestPrice": 17744,
-    "highestPrice": 18683,
+    "highestPrice": 17744,
     "sixMonthLowestPrice": 16209,
     "priceStore": "Infinix",
     "priceUrl": "https://tr.infinixmobility.com/smartphones",
@@ -12336,7 +12150,8 @@
         "isAvailable": true,
         "isOfficial": true
       }
-    ]
+    ],
+    "storesCount": 1
   },
   {
     "id": "phone-088",
@@ -12346,12 +12161,10 @@
     "brandSlug": "infinix",
     "image": "/images/phones/infinix-note-40-pro-5g.svg",
     "images": [
-      "/images/phones/infinix-note-40-pro-5g.svg",
-      "/images/phones/infinix-note-40-pro-5g.svg",
       "/images/phones/infinix-note-40-pro-5g.svg"
     ],
     "lowestPrice": 16143,
-    "highestPrice": 16997,
+    "highestPrice": 16143,
     "sixMonthLowestPrice": 14746,
     "priceStore": "Infinix",
     "priceUrl": "https://tr.infinixmobility.com/smartphones",
@@ -12466,7 +12279,8 @@
         "isAvailable": true,
         "isOfficial": true
       }
-    ]
+    ],
+    "storesCount": 1
   },
   {
     "id": "phone-089",
@@ -12476,8 +12290,6 @@
     "brandSlug": "tcl",
     "image": "/images/phones/tcl-50-pro-nxtpaper-5g.svg",
     "images": [
-      "/images/phones/tcl-50-pro-nxtpaper-5g.svg",
-      "/images/phones/tcl-50-pro-nxtpaper-5g.svg",
       "/images/phones/tcl-50-pro-nxtpaper-5g.svg"
     ],
     "lowestPrice": 0,
@@ -12591,7 +12403,8 @@
         "updatePolicy": "4-7 Yıl Resmi Güncelleme Garantisi"
       }
     },
-    "storesPrices": []
+    "storesPrices": [],
+    "storesCount": 0
   },
   {
     "id": "phone-090",
@@ -12601,8 +12414,6 @@
     "brandSlug": "meizu",
     "image": "/images/phones/meizu-21-pro.svg",
     "images": [
-      "/images/phones/meizu-21-pro.svg",
-      "/images/phones/meizu-21-pro.svg",
       "/images/phones/meizu-21-pro.svg"
     ],
     "lowestPrice": 0,
@@ -12722,7 +12533,8 @@
         "updatePolicy": "4-7 Yıl Resmi Güncelleme Garantisi"
       }
     },
-    "storesPrices": []
+    "storesPrices": [],
+    "storesCount": 0
   },
   {
     "id": "phone-091",
@@ -12732,8 +12544,6 @@
     "brandSlug": "fairphone",
     "image": "/images/phones/fairphone-5.svg",
     "images": [
-      "/images/phones/fairphone-5.svg",
-      "/images/phones/fairphone-5.svg",
       "/images/phones/fairphone-5.svg"
     ],
     "lowestPrice": 0,
@@ -12847,7 +12657,8 @@
         "updatePolicy": "4-7 Yıl Resmi Güncelleme Garantisi"
       }
     },
-    "storesPrices": []
+    "storesPrices": [],
+    "storesCount": 0
   },
   {
     "id": "phone-092",
@@ -12857,8 +12668,6 @@
     "brandSlug": "hmd",
     "image": "/images/phones/hmd-skyline.svg",
     "images": [
-      "/images/phones/hmd-skyline.svg",
-      "/images/phones/hmd-skyline.svg",
       "/images/phones/hmd-skyline.svg"
     ],
     "lowestPrice": 0,
@@ -12978,7 +12787,8 @@
         "updatePolicy": "4-7 Yıl Resmi Güncelleme Garantisi"
       }
     },
-    "storesPrices": []
+    "storesPrices": [],
+    "storesCount": 0
   },
   {
     "id": "phone-093",
@@ -12988,8 +12798,6 @@
     "brandSlug": "nokia",
     "image": "/images/phones/nokia-xr21-5g.svg",
     "images": [
-      "/images/phones/nokia-xr21-5g.svg",
-      "/images/phones/nokia-xr21-5g.svg",
       "/images/phones/nokia-xr21-5g.svg"
     ],
     "lowestPrice": 0,
@@ -13103,7 +12911,8 @@
         "updatePolicy": "4-7 Yıl Resmi Güncelleme Garantisi"
       }
     },
-    "storesPrices": []
+    "storesPrices": [],
+    "storesCount": 0
   },
   {
     "id": "phone-094",
@@ -13113,8 +12922,6 @@
     "brandSlug": "nokia",
     "image": "/images/phones/nokia-g42-5g.svg",
     "images": [
-      "/images/phones/nokia-g42-5g.svg",
-      "/images/phones/nokia-g42-5g.svg",
       "/images/phones/nokia-g42-5g.svg"
     ],
     "lowestPrice": 0,
@@ -13223,7 +13030,8 @@
         "updatePolicy": "4-7 Yıl Resmi Güncelleme Garantisi"
       }
     },
-    "storesPrices": []
+    "storesPrices": [],
+    "storesCount": 0
   },
   {
     "id": "phone-095",
@@ -13233,8 +13041,6 @@
     "brandSlug": "sharp",
     "image": "/images/phones/sharp-aquos-r9.svg",
     "images": [
-      "/images/phones/sharp-aquos-r9.svg",
-      "/images/phones/sharp-aquos-r9.svg",
       "/images/phones/sharp-aquos-r9.svg"
     ],
     "lowestPrice": 0,
@@ -13348,7 +13154,8 @@
         "updatePolicy": "4-7 Yıl Resmi Güncelleme Garantisi"
       }
     },
-    "storesPrices": []
+    "storesPrices": [],
+    "storesCount": 0
   },
   {
     "id": "phone-096",
@@ -13358,8 +13165,6 @@
     "brandSlug": "lenovo",
     "image": "/images/phones/lenovo-legion-y90.svg",
     "images": [
-      "/images/phones/lenovo-legion-y90.svg",
-      "/images/phones/lenovo-legion-y90.svg",
       "/images/phones/lenovo-legion-y90.svg"
     ],
     "lowestPrice": 0,
@@ -13473,7 +13278,8 @@
         "updatePolicy": "4-7 Yıl Resmi Güncelleme Garantisi"
       }
     },
-    "storesPrices": []
+    "storesPrices": [],
+    "storesCount": 0
   },
   {
     "id": "phone-097",
@@ -13483,8 +13289,6 @@
     "brandSlug": "iqoo",
     "image": "/images/phones/iqoo-13-5g.svg",
     "images": [
-      "/images/phones/iqoo-13-5g.svg",
-      "/images/phones/iqoo-13-5g.svg",
       "/images/phones/iqoo-13-5g.svg"
     ],
     "lowestPrice": 0,
@@ -13604,6 +13408,7 @@
         "updatePolicy": "4-7 Yıl Resmi Güncelleme Garantisi"
       }
     },
-    "storesPrices": []
+    "storesPrices": [],
+    "storesCount": 0
   }
 ]

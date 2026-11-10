@@ -58,9 +58,16 @@ public class ProductsController : BaseApiController
     }
 
     [HttpGet("{slug}/offers")]
-    public async Task<IActionResult> GetOffersByPhoneSlug(string slug, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetOffersByPhoneSlug(string slug, [FromQuery] int? storage, CancellationToken cancellationToken)
     {
-        var result = await _productService.GetOffersByPhoneSlugAsync(slug, cancellationToken);
+        var result = await _productService.GetOffersByPhoneSlugAsync(slug, storage, cancellationToken);
+        return HandleResult(result);
+    }
+
+    [HttpGet("{idOrSlug}/prices")]
+    public async Task<IActionResult> GetPrices(string idOrSlug, [FromQuery] int? storage, CancellationToken cancellationToken)
+    {
+        var result = await _productService.GetPricesByPhoneIdAsync(idOrSlug, storage, cancellationToken);
         return HandleResult(result);
     }
 

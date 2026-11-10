@@ -1,99 +1,99 @@
 namespace EnUcuzTelefon.Application.DTOs;
 
 public record DisplaySpecsDto(
-    double Size,
-    string Resolution,
-    string Technology,
-    int RefreshRate,
-    int Brightness,
-    string AspectRatio,
-    string? Protection,
-    string? Hdr,
-    int Ppi);
+    double? Size = null,
+    string? Resolution = null,
+    string? Technology = null,
+    int? RefreshRate = null,
+    int? Brightness = null,
+    string? AspectRatio = null,
+    string? Protection = null,
+    string? Hdr = null,
+    int? Ppi = null);
 
 public record MainCameraSpecsDto(
-    int Megapixels,
-    string Aperture,
-    string? SensorSize,
-    bool Ois,
-    string Autofocus);
+    int? Megapixels = null,
+    string? Aperture = null,
+    string? SensorSize = null,
+    bool? Ois = null,
+    string? Autofocus = null);
 
 public record UltrawideSpecsDto(
-    int Megapixels,
-    string Aperture,
-    int Fov);
+    int? Megapixels = null,
+    string? Aperture = null,
+    int? Fov = null);
 
 public record TelephotoSpecsDto(
-    int Megapixels,
-    string Aperture,
-    int OpticalZoom,
-    int? MaxZoom);
+    int? Megapixels = null,
+    string? Aperture = null,
+    int? OpticalZoom = null,
+    int? MaxZoom = null);
 
 public record FrontCameraSpecsDto(
-    int Megapixels,
-    string Aperture,
-    bool Autofocus);
+    int? Megapixels = null,
+    string? Aperture = null,
+    bool? Autofocus = null);
 
 public record CameraSpecsDto(
-    MainCameraSpecsDto MainCamera,
-    UltrawideSpecsDto? Ultrawide,
-    TelephotoSpecsDto? Telephoto,
-    FrontCameraSpecsDto FrontCamera,
-    List<string> VideoCapabilities,
-    List<string>? Features);
+    MainCameraSpecsDto? MainCamera = null,
+    UltrawideSpecsDto? Ultrawide = null,
+    TelephotoSpecsDto? Telephoto = null,
+    FrontCameraSpecsDto? FrontCamera = null,
+    List<string>? VideoCapabilities = null,
+    List<string>? Features = null);
 
 public record BatterySpecsDto(
-    int Capacity,
-    int WiredCharging,
-    int? WirelessCharging,
-    bool? ReverseWirelessCharging,
-    string? ChargingTime,
-    bool Removable);
+    int? Capacity = null,
+    int? WiredCharging = null,
+    int? WirelessCharging = null,
+    bool? ReverseWirelessCharging = null,
+    string? ChargingTime = null,
+    bool? Removable = null);
 
 public record PerformanceSpecsDto(
-    string Chipset,
-    string Cpu,
-    string Gpu,
-    int Ram,
-    int Storage,
-    string StorageType,
-    bool ExpandableStorage,
+    string? Chipset = null,
+    string? Cpu = null,
+    string? Gpu = null,
+    int? Ram = null,
+    int? Storage = null,
+    string? StorageType = null,
+    bool? ExpandableStorage = null,
     int? AntutuScore = null,
     int? GeekbenchSingle = null,
     int? GeekbenchMulti = null);
 
 public record ConnectivitySpecsDto(
-    string Sim,
-    bool Nfc,
-    string Bluetooth,
-    string Wifi,
-    string Usb,
-    bool FiveG,
-    bool Infrared);
+    string? Sim = null,
+    bool? Nfc = null,
+    string? Bluetooth = null,
+    string? Wifi = null,
+    string? Usb = null,
+    bool? FiveG = null,
+    bool? Infrared = null);
 
 public record DesignSpecsDto(
-    double Width,
-    double Height,
-    double Thickness,
-    double Weight,
-    string Materials,
-    List<string> Colors,
-    string WaterResistance,
-    string Fingerprint,
-    bool FaceId);
+    double? Width = null,
+    double? Height = null,
+    double? Thickness = null,
+    double? Weight = null,
+    string? Materials = null,
+    List<string>? Colors = null,
+    string? WaterResistance = null,
+    string? Fingerprint = null,
+    bool? FaceId = null);
 
 public record SoftwareSpecsDto(
-    string Os,
-    string? UpdatePolicy);
+    string? Os = null,
+    string? UpdatePolicy = null);
 
 public record PhoneSpecsDto(
-    DisplaySpecsDto Display,
-    CameraSpecsDto Camera,
-    BatterySpecsDto Battery,
-    PerformanceSpecsDto Performance,
-    ConnectivitySpecsDto Connectivity,
-    DesignSpecsDto? Design,
-    SoftwareSpecsDto? Software);
+    DisplaySpecsDto? Display = null,
+    CameraSpecsDto? Camera = null,
+    BatterySpecsDto? Battery = null,
+    PerformanceSpecsDto? Performance = null,
+    ConnectivitySpecsDto? Connectivity = null,
+    DesignSpecsDto? Design = null,
+    SoftwareSpecsDto? Software = null);
 
 public record StorePriceDto(
     string Store,
@@ -114,6 +114,15 @@ public record PriceHistoryDto(
     decimal Price,
     string Store);
 
+public record ProductPricesResponseDto(
+    string Id,
+    string PhoneSlug,
+    decimal LowestPrice,
+    decimal HighestPrice,
+    int TotalStores,
+    List<StorePriceDto> StorePrices,
+    string LastUpdated);
+
 public record PhoneDto(
     string Id,
     string Slug,
@@ -127,7 +136,7 @@ public record PhoneDto(
     decimal? SixMonthLowestPrice,
     string? PriceStore,
     string? PriceUrl,
-    string ReleaseDate,
+    string? ReleaseDate,
     bool IsNew,
     bool IsPriceDropped,
     int? PriceDropPercent,

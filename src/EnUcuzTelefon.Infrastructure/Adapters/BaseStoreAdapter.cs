@@ -169,7 +169,7 @@ public abstract class BaseStoreAdapter : IStoreAdapter
                         var fullUrl = urlPath.StartsWith("http") ? urlPath : (baseUrl != null ? $"{baseUrl.TrimEnd('/')}{urlPath}" : urlPath);
                         var (brand, model, ram, storage, color) = ParseTitle(title);
                         results.Add(new StoreRawProduct(
-                            ExternalId: $"{idPrefix}-{Math.Abs((fullUrl + price).GetHashCode()):X8}",
+                            ExternalId: StableId(idPrefix, fullUrl),
                             Title: title,
                             Url: fullUrl,
                             Price: price,
@@ -183,7 +183,6 @@ public abstract class BaseStoreAdapter : IStoreAdapter
                             Color: color,
                             RawJson: null
                         ));
-                        break;
                     }
                 }
             }
@@ -193,7 +192,43 @@ public abstract class BaseStoreAdapter : IStoreAdapter
             Logger.LogDebug(ex, "Direct scrape for store {StoreSlug} encountered exception, falling back to market aggregator", StoreSlug);
         }
 
-        return Result.Success<IReadOnlyList<StoreRawProduct>>(results);
+        var best = PickBest(results, query);
+        return Result.Success<IReadOnlyList<StoreRawProduct>>(best != null ? new List<StoreRawProduct> { best } : new List<StoreRawProduct>());
+    }
+
+    public static int ExtractStorage(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return 0;
+        var match = Regex.Match(text, @"(\d+)\s*(GB|TB)", RegexOptions.IgnoreCase);
+        if (!match.Success) return 0;
+        var num = int.Parse(match.Groups[1].Value);
+        var unit = match.Groups[2].Value.ToUpperInvariant();
+        return unit == "TB" ? num * 1024 : num;
+    }
+
+    public static StoreRawProduct? PickBest(IEnumerable<StoreRawProduct> candidates, string query)
+    {
+        var list = candidates.Where(c => c.Price > 0).ToList();
+        if (list.Count == 0) return null;
+
+        var qStorage = ExtractStorage(query);
+
+        // Varsa tam depolama eşleşmesi, yoksa depolamasız sorguysa serbest
+        var matchStorage = qStorage > 0
+            ? list.Where(c => c.StorageGb == qStorage).ToList()
+            : list;
+
+        var pool = matchStorage.Count > 0 ? matchStorage : list;
+
+        // Fiyatı en düşük olanı seç (enucuztelefon vaadi)
+        return pool.OrderBy(c => c.Price).FirstOrDefault();
+    }
+
+    public static string StableId(string prefix, string url)
+    {
+        using var md5 = System.Security.Cryptography.MD5.Create();
+        var hash = Convert.ToHexString(md5.ComputeHash(System.Text.Encoding.UTF8.GetBytes(url)));
+        return $"{prefix}_{hash[..12]}";
     }
 
     public static bool IsAccessory(string? title)
@@ -372,29 +407,7 @@ public abstract class BaseStoreAdapter : IStoreAdapter
 
     public virtual StoreRawProduct CreateQueryFallbackProduct(string query, decimal estimatedBasePrice = 0)
     {
-        var (brand, model, ram, storage, color) = ParseTitle(query);
-        var cleanTitle = string.IsNullOrWhiteSpace(model) || model == query
-            ? query.Trim()
-            : $"{brand} {model} {storage}GB {color}".Trim();
-
-        var price = estimatedBasePrice > 0 ? estimatedBasePrice : MarketAggregator.EstimateBasePrice(cleanTitle);
-        var searchUrl = ResolveSafeStoreUrl(StoreSlug, "", cleanTitle);
-        var extId = $"{StoreSlug.ToUpperInvariant()}-{Math.Abs((cleanTitle + price).GetHashCode()):X8}";
-
-        return new StoreRawProduct(
-            ExternalId: extId,
-            Title: cleanTitle,
-            Url: searchUrl,
-            Price: price,
-            SellerName: $"{StoreName} Doğrulanmış Mağaza",
-            InStock: true,
-            ImageUrl: null,
-            Brand: brand,
-            Model: model,
-            RamGb: ram,
-            StorageGb: storage,
-            Color: color,
-            RawJson: null);
+        throw new NotSupportedException("Uydurma/tahmini fiyat üretmek devre dışı bırakılmıştır.");
     }
 
     protected virtual (string Brand, string Model, int Ram, int Storage, string Color) ParseTitle(string title)

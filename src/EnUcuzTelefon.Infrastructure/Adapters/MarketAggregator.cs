@@ -70,7 +70,7 @@ public static class MarketAggregator
         HttpClient.DefaultRequestHeaders.Add("Accept-Language", "tr-TR,tr;q=0.9,en-US;q=0.8");
     }
 
-    public record AggregatedMarketOffer(string StoreSlug, string StoreName, string SellerName, decimal Price, string Url, bool IsDirectProductUrl = false);
+    public record AggregatedMarketOffer(string StoreSlug, string StoreName, string SellerName, decimal Price, string Url, bool IsDirectProductUrl = false, string? Title = null, int StorageGb = 0);
 
     private record SeedPhoneEntry(string Slug, string Name, decimal LowestPrice, IReadOnlyList<AggregatedMarketOffer> Offers);
 
@@ -389,8 +389,8 @@ public static class MarketAggregator
 
                         if (!string.IsNullOrWhiteSpace(name) && !string.IsNullOrWhiteSpace(prodUrl) && price >= 3000 && IsModelMatch(query, name, prodUrl))
                         {
-                            list.Add(new AggregatedMarketOffer("mediamarkt", "MediaMarkt", "MediaMarkt Resmi Mağaza", Math.Round(price, 2), prodUrl, true));
-                            return list;
+                            var storage = BaseStoreAdapter.ExtractStorage(name);
+                            list.Add(new AggregatedMarketOffer("mediamarkt", "MediaMarkt", "MediaMarkt Resmi Mağaza", Math.Round(price, 2), prodUrl, true, name, storage));
                         }
                     }
                 }
@@ -641,83 +641,6 @@ public static class MarketAggregator
             "sok" => "ŞOK",
             _ => slug
         };
-    }
-
-    private static decimal ApplyFallbackStoreMargin(decimal basePrice, string storeSlug, string query)
-    {
-        // Strictly > 1.025m so a synthetic fallback store offer NEVER undercuts a real verified store offer!
-        var hash = Math.Abs((query.ToLowerInvariant() + ":" + storeSlug.ToLowerInvariant()).GetHashCode());
-        var step = (hash % 14) + 5; // 5 to 18 -> +2.75% to +9.9% above basePrice
-        var multiplier = 1.000m + (step * 0.0055m);
-        return Math.Round(basePrice * multiplier, 0);
-    }
-
-    public static decimal EstimateBasePrice(string query)
-    {
-        var seed = FindSeedEntry(query);
-        if (seed != null && seed.LowestPrice > 0)
-        {
-            return seed.LowestPrice;
-        }
-
-        var q = query.ToLowerInvariant();
-        decimal price = 34999m;
-
-        // Apple Models
-        if (q.Contains("mate xt")) price = 140057m;
-        else if (q.Contains("17 pro max")) price = 105699m;
-        else if (q.Contains("iphone air")) price = 59014m;
-        else if (q.Contains("16 pro max")) price = 93499m;
-        else if (q.Contains("16 pro")) price = 84959m;
-        else if (q.Contains("16 plus")) price = 80968m;
-        else if (q.Contains("iphone 16")) price = 69399m;
-        else if (q.Contains("15 pro max")) price = 74299m;
-        else if (q.Contains("15 pro")) price = 73999m;
-        else if (q.Contains("15 plus")) price = 58999m;
-        else if (q.Contains("iphone 15")) price = 56449m;
-        else if (q.Contains("14 pro max")) price = 64999m;
-        else if (q.Contains("14 pro")) price = 56999m;
-        else if (q.Contains("iphone 14")) price = 43999m;
-        else if (q.Contains("iphone 13")) price = 35999m;
-        else if (q.Contains("iphone se")) price = 27061m;
-
-        // Samsung Models
-        else if (q.Contains("s26 ultra")) price = 82971m;
-        else if (q.Contains("s25 ultra")) price = 69997m;
-        else if (q.Contains("s25+") || q.Contains("s25 plus")) price = 53000m;
-        else if (q.Contains("s25")) price = 44052m;
-        else if (q.Contains("s24 ultra")) price = 74512m;
-        else if (q.Contains("s24 fe")) price = 29017m;
-        else if (q.Contains("s23 fe")) price = 22025m;
-        else if (q.Contains("z fold 6")) price = 79012m;
-        else if (q.Contains("z flip 6")) price = 46008m;
-        else if (q.Contains("a56")) price = 19018m;
-        else if (q.Contains("a55")) price = 16500m;
-        else if (q.Contains("a36")) price = 15033m;
-        else if (q.Contains("a35")) price = 13312m;
-        else if (q.Contains("a25")) price = 10559m;
-        else if (q.Contains("a16")) price = 9019m;
-        else if (q.Contains("a15")) price = 7552m;
-        else if (q.Contains("m55")) price = 14055m;
-
-        // Xiaomi / Redmi / POCO / Honor / Huawei / vivo / OPPO / OnePlus
-        else if (q.Contains("mix fold 4")) price = 65028m;
-        else if (q.Contains("15 pro")) price = 43001m;
-        else if (q.Contains("xiaomi 15")) price = 54999m;
-        else if (q.Contains("14t pro")) price = 35999m;
-        else if (q.Contains("xiaomi 14")) price = 32024m;
-        else if (q.Contains("13 ultra")) price = 39016m;
-        else if (q.Contains("pura 70 ultra")) price = 57199m;
-        else if (q.Contains("magic v3")) price = 75027m;
-        else if (q.Contains("magic 7 pro")) price = 55029m;
-        else if (q.Contains("magic 6 pro")) price = 59499m;
-        else if (q.Contains("x200 pro")) price = 64499m;
-        else if (q.Contains("x100 pro")) price = 44052m;
-        else if (q.Contains("find x8 pro")) price = 49015m;
-        else if (q.Contains("oneplus 13")) price = 50066m;
-        else if (q.Contains("oneplus open")) price = 70064m;
-
-        return Math.Round(price, 2);
     }
 
     private static string StripStorageSuffix(string query)
