@@ -166,6 +166,10 @@ public static class MarketAggregator
         {
             return false;
         }
+        if (u.Contains("mi.com/tr/phone"))
+        {
+            return false;
+        }
 
         return true;
     }

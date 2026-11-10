@@ -721,7 +721,9 @@ public class ProductService : IProductService
             ? variant.SixMonthLowestPrice
             : null;
 
-        var dropValid = variant is { IsPriceDropped: true }
+        var dropValid = offers.Count > 0
+                        && lowestPrice > 0
+                        && variant is { IsPriceDropped: true }
                         && variant.PriceDropPercent is >= 2 and <= 35;
         int? priceDropPercent = dropValid ? variant!.PriceDropPercent : null;
 

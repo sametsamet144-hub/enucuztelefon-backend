@@ -791,11 +791,14 @@ public static class DatabaseSeeder
                 variant.LowestPriceStoreName = minOffer.Store?.Name ?? priceStore;
                 variant.LowestPriceUrl = minOffer.Url;
             }
-            else if (!isDirectPriceUrl)
+            else
             {
                 variant.LowestPrice = 0;
+                variant.HighestPrice = 0;
                 variant.LowestPriceStoreName = null;
                 variant.LowestPriceUrl = null;
+                variant.IsPriceDropped = false;
+                variant.PriceDropPercent = 0;
             }
 
             repairedVariants++;
