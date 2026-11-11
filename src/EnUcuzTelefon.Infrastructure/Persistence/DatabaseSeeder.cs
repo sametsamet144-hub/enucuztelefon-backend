@@ -18,6 +18,21 @@ public static class DatabaseSeeder
         RoleManager<IdentityRole> roleManager,
         ILogger logger)
     {
+        // 0. Ensure schema columns exist on relational databases
+        if (context.Database.IsRelational())
+        {
+            try
+            {
+                await context.Database.ExecuteSqlRawAsync(@"
+                    ALTER TABLE ""Offers"" ADD COLUMN IF NOT EXISTS ""ConsecutiveFailures"" integer NOT NULL DEFAULT 0;
+                    ALTER TABLE ""Offers"" ADD COLUMN IF NOT EXISTS ""PendingPrice"" numeric(18,2) NULL;
+                    ALTER TABLE ""ScrapingJobs"" ADD COLUMN IF NOT EXISTS ""HeartbeatAt"" timestamp with time zone NULL;
+                    ALTER TABLE ""ProductVariants"" ADD COLUMN IF NOT EXISTS ""PriceDropDetectedAt"" timestamp with time zone NULL;
+                ");
+            }
+            catch { /* non-relational or already created */ }
+        }
+
         // 1. Roles & Admin User
         string[] roles = { "Admin", "Editor", "User" };
         foreach (var role in roles)
@@ -657,6 +672,7 @@ public static class DatabaseSeeder
         var existingProducts = await context.Products
             .Include(p => p.Variants)
                 .ThenInclude(v => v.Offers)
+                    .ThenInclude(o => o.Store)
             .ToDictionaryAsync(p => p.Slug, StringComparer.OrdinalIgnoreCase);
 
         var jsonText = await File.ReadAllTextAsync(seedFilePath);
@@ -706,9 +722,9 @@ public static class DatabaseSeeder
             variant.LowestPriceStoreName = isDirectPriceUrl ? priceStore : null;
             variant.LowestPriceUrl = isDirectPriceUrl ? priceUrl : null;
 
-            // Remove any existing offers belonging to stores not in AllowedStoreSlugs or containing fake search URLs
+            // Only remove offers belonging to unallowed stores or empty URLs
             var invalidOffers = variant.Offers
-                .Where(o => o.Store == null || !AllowedStoreSlugs.Contains(o.Store.Slug) || !MarketAggregator.IsDirectProductUrl(o.Url))
+                .Where(o => o.Store == null || !AllowedStoreSlugs.Contains(o.Store.Slug) || string.IsNullOrWhiteSpace(o.Url))
                 .ToList();
             if (invalidOffers.Any())
             {
@@ -740,56 +756,74 @@ public static class DatabaseSeeder
                         ? uEl.GetString() ?? priceUrl
                         : priceUrl;
 
-                    // Data yoksa yoktur: Sahte arama fallback linkleri offer olarak kaydedilmez
-                    if (!MarketAggregator.IsDirectProductUrl(offerUrl))
+                    if (string.IsNullOrWhiteSpace(offerUrl))
                     {
                         continue;
                     }
 
                     if (existingOffersByStoreId.TryGetValue(storeObj.Id, out var existingOffer))
                     {
-                        existingOffer.Price = offerPrice;
-                        existingOffer.TotalCost = offerPrice;
-                        existingOffer.Url = offerUrl;
-                        existingOffer.IsAvailable = true;
-                        existingOffer.IsVerified = true;
-                        existingOffer.LastCheckedAt = DateTime.UtcNow;
+                        // Preserve live verified prices and URLs; only update if offer was uninitialized or broken
+                        if (existingOffer.Price <= 0)
+                        {
+                            existingOffer.Price = offerPrice;
+                            existingOffer.TotalCost = offerPrice;
+                        }
+
+                        if (string.IsNullOrWhiteSpace(existingOffer.Url) || EnUcuzTelefon.Shared.Utils.StoreUrlHelper.IsSyntheticUrl(existingOffer.Url))
+                        {
+                            var targetUrl = !EnUcuzTelefon.Shared.Utils.StoreUrlHelper.IsSyntheticUrl(offerUrl)
+                                ? offerUrl
+                                : EnUcuzTelefon.Shared.Utils.StoreUrlHelper.ResolveSafeStoreUrl(storeObj.Slug, null, $"{product.Name} {variant.StorageGb}GB");
+                            existingOffer.Url = targetUrl;
+                            existingOffer.IsAvailable = true;
+                        }
+
+                        // Schedule for worker health check
+                        if (existingOffer.LastCheckedAt == default)
+                        {
+                            existingOffer.LastCheckedAt = DateTime.UtcNow.AddHours(-12);
+                        }
                     }
                     else
                     {
+                        var initialUrl = !EnUcuzTelefon.Shared.Utils.StoreUrlHelper.IsSyntheticUrl(offerUrl)
+                            ? offerUrl
+                            : EnUcuzTelefon.Shared.Utils.StoreUrlHelper.ResolveSafeStoreUrl(storeObj.Slug, null, $"{product.Name} {variant.StorageGb}GB");
+
                         var newOffer = new Offer
                         {
                             VariantId = variant.Id,
                             StoreId = storeObj.Id,
+                            Store = storeObj,
                             Price = offerPrice,
                             TotalCost = offerPrice,
                             ShippingCost = 0,
-                            Url = offerUrl,
+                            Url = initialUrl,
                             IsAvailable = true,
                             IsVerified = true,
-                            LastCheckedAt = DateTime.UtcNow,
+                            LastCheckedAt = DateTime.UtcNow.AddHours(-12),
                             ShippingText = storeObj.ShippingInfo,
                             GuaranteeText = "2 Yıl Resmi Distribütör Garantili",
                             InstallmentText = "Peşin Fiyatına 3 Taksit",
                             IsOfficial = storeObj.Type == StoreType.BrandOfficial
                         };
                         context.Offers.Add(newOffer);
-                        existingOffersByStoreId[storeObj.Id] = newOffer;
+                        variant.Offers.Add(newOffer);
+                        syncedOffers++;
                     }
-                    syncedOffers++;
                 }
             }
 
-            var verifiedOffers = variant.Offers
-                .Where(o => o.IsAvailable && o.Price > 0 && o.Store != null && AllowedStoreSlugs.Contains(o.Store.Slug) && MarketAggregator.IsDirectProductUrl(o.Url))
-                .OrderBy(o => o.Price)
-                .ToList();
-            if (verifiedOffers.Any())
+            // Strictly recalculate variant lowest and highest prices from active offers
+            var activeOffers = variant.Offers.Where(o => o.IsAvailable && o.Price > 0).ToList();
+            if (activeOffers.Any())
             {
-                var minOffer = verifiedOffers.First();
-                variant.LowestPrice = minOffer.Price;
-                variant.LowestPriceStoreName = minOffer.Store?.Name ?? priceStore;
-                variant.LowestPriceUrl = minOffer.Url;
+                var bestOffer = activeOffers.OrderBy(o => o.Price).First();
+                variant.LowestPrice = bestOffer.Price;
+                variant.LowestPriceStoreName = bestOffer.Store?.Name ?? priceStore;
+                variant.LowestPriceUrl = bestOffer.Url;
+                variant.HighestPrice = activeOffers.Max(o => o.Price);
             }
             else
             {

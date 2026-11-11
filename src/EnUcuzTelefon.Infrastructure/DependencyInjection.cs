@@ -113,6 +113,7 @@ public static class DependencyInjection
         services.AddScoped<IPriceVerificationService, PriceVerificationService>();
         services.AddScoped<IPriceAlertNotifier, PriceAlertNotifier>();
         services.AddSingleton<IMarketOfferAggregator, MarketOfferAggregatorService>();
+        services.AddScoped<ILiveOfferVerificationEngine, LiveOfferVerificationEngine>();
 
         // 7. Application Services
         services.AddScoped<IProductService, ProductService>();
@@ -133,6 +134,13 @@ public static class DependencyInjection
         {
             options.WaitForJobsToComplete = true;
         });
+
+        // 9. Scraping Background Worker & Pipeline
+        services.Configure<ScrapingWorkerOptions>(configuration.GetSection("ScrapingWorker"));
+        services.AddSingleton(TimeProvider.System);
+        services.AddSingleton<StoreRequestThrottle>();
+        services.AddScoped<OfferHealthSynchronizer>();
+        services.AddScoped<StoreScrapingJobRunner>();
 
         return services;
     }

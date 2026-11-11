@@ -35,6 +35,38 @@ public record PriceAlertDto(
 public record CompareRequestDto(
     List<string> PhoneSlugs);
 
+public record PhoneStorePriceItemDto(
+    string Store,
+    string StoreSlug,
+    string? StoreLogoUrl,
+    decimal Price,
+    decimal? OriginalPrice,
+    string Url,
+    string? SellerName,
+    double? SellerRating,
+    bool IsAvailable,
+    string? Variant,
+    int? StorageGb,
+    string? Color,
+    string? ShippingText,
+    string? GuaranteeText,
+    string? InstallmentText,
+    bool IsOfficial,
+    DateTime LastCheckedAt);
+
+public record PhonePricesResponseDto(
+    Guid PhoneId,
+    string PhoneName,
+    string Slug,
+    string Brand,
+    string BrandSlug,
+    string ImageUrl,
+    decimal LowestPrice,
+    decimal HighestPrice,
+    int TotalStores,
+    int TotalOffers,
+    List<PhoneStorePriceItemDto> StorePrices);
+
 public record ProductFilterParams(
     string? Brand = null,
     string? Search = null,

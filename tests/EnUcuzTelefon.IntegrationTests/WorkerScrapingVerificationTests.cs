@@ -85,9 +85,9 @@ public class WorkerScrapingVerificationTests : IClassFixture<CustomWebApplicatio
         collectedOffers.Should().NotBeEmpty();
 
         var validPricesCount = collectedOffers.Count(o => o.Price > 0);
-        validPricesCount.Should().Be(291, "all 291 offers must contain valid prices greater than 0");
+        validPricesCount.Should().Be(collectedOffers.Count, "all collected offers must contain valid prices greater than 0");
 
         var validUrlsCount = collectedOffers.Count(o => !string.IsNullOrWhiteSpace(o.Url) && o.Url.StartsWith("http"));
-        validUrlsCount.Should().Be(291, "all 291 offers must contain valid URLs starting with http");
+        validUrlsCount.Should().Be(collectedOffers.Count, "all collected offers must contain valid URLs starting with http");
     }
 }

@@ -83,6 +83,7 @@ public interface IProductService
     Task<Result<IReadOnlyList<StorePriceDto>>> GetOffersByPhoneSlugAsync(string slug, int? storage = null, CancellationToken cancellationToken = default);
     Task<Result<ProductPricesResponseDto>> GetPricesByPhoneIdAsync(string idOrSlug, int? storage = null, CancellationToken cancellationToken = default);
     Task<Result<IReadOnlyList<PriceHistoryDto>>> GetPriceHistoryByPhoneSlugAsync(string slug, CancellationToken cancellationToken = default);
+    Task<Result<PhonePricesResponseDto>> GetPricesByPhoneIdAsync(Guid phoneId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<PhoneDto>> GetDealsAsync(int limit = 6, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<PhoneDto>> GetCheapestAsync(int limit = 6, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<PhoneDto>> GetNewReleasesAsync(int limit = 6, CancellationToken cancellationToken = default);
@@ -191,7 +192,7 @@ public class ProductService : IProductService
             "rating" => query.OrderByDescending(p => p.Rating),
             "price-drop" => query.OrderByDescending(p => p.Variants.Max(v => v.PriceDropPercent)),
             _ => query
-                .OrderByDescending(p => p.Variants.Any(v => v.Offers.Any(o => o.IsAvailable && o.Price > 0)))
+                .OrderByDescending(p => p.Variants.Any(v => v.Offers.Any(o => o.Price > 0) || v.LowestPrice > 0))
                 .ThenByDescending(p => p.Rating)
                 .ThenByDescending(p => p.ReviewCount)
         };
@@ -569,6 +570,84 @@ public class ProductService : IProductService
             TotalStores: storePrices.Count,
             StorePrices: storePrices,
             LastUpdated: DateTime.UtcNow.ToString("o"));
+
+        await _cache.SetAsync(cacheKey, response, TimeSpan.FromMinutes(10), cancellationToken);
+        return Result.Success(response);
+    }
+
+    public async Task<Result<PhonePricesResponseDto>> GetPricesByPhoneIdAsync(Guid phoneId, CancellationToken cancellationToken = default)
+    {
+        var cacheKey = $"phone:prices:{phoneId}";
+        var cached = await _cache.GetAsync<PhonePricesResponseDto>(cacheKey, cancellationToken);
+        if (cached != null) return Result.Success(cached);
+
+        var product = await _context.Products
+            .Include(p => p.Brand)
+            .Include(p => p.Variants)
+                .ThenInclude(v => v.Offers)
+                    .ThenInclude(o => o.Store)
+            .Include(p => p.Variants)
+                .ThenInclude(v => v.Offers)
+                    .ThenInclude(o => o.Seller)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == phoneId, cancellationToken);
+
+        if (product == null)
+        {
+            return Result.Failure<PhonePricesResponseDto>(Error.NotFound("Product.NotFound", $"Phone with id '{phoneId}' was not found."));
+        }
+
+        var offerItems = product.Variants
+            .SelectMany(v => v.Offers.Select(o => new { Offer = o, Variant = v }))
+            .Where(x => x.Offer != null && x.Offer.IsAvailable && x.Offer.Price > 0 && x.Offer.Store != null && !string.IsNullOrWhiteSpace(x.Offer.Url) && EnUcuzTelefon.Shared.Utils.StoreUrlHelper.IsDirectProductUrl(x.Offer.Url))
+            .GroupBy(x => x.Offer.Store.Slug, StringComparer.OrdinalIgnoreCase)
+            .Select(g => g
+                .OrderByDescending(x => EnUcuzTelefon.Shared.Utils.StoreUrlHelper.IsDirectProductUrl(x.Offer.Url))
+                .ThenBy(x => x.Offer.Price)
+                .First())
+            .OrderBy(x => x.Offer.Price)
+            .Select(x => new PhoneStorePriceItemDto(
+                Store: x.Offer.Store.Name,
+                StoreSlug: x.Offer.Store.Slug,
+                StoreLogoUrl: x.Offer.Store.LogoUrl,
+                Price: x.Offer.Price,
+                OriginalPrice: x.Offer.OriginalPrice,
+                Url: EnUcuzTelefon.Shared.Utils.StoreUrlHelper.ResolveSafeStoreUrl(x.Offer.Store?.Slug ?? "", x.Offer.Url, product.Name),
+                SellerName: x.Offer.Seller?.Name ?? x.Offer.Store.Name,
+                SellerRating: x.Offer.Seller?.Rating ?? x.Offer.Store.ReliabilityScore,
+                IsAvailable: x.Offer.IsAvailable,
+                Variant: $"{x.Variant.StorageGb} GB" + (!string.IsNullOrWhiteSpace(x.Variant.Color) ? $" - {x.Variant.Color}" : string.Empty),
+                StorageGb: x.Variant.StorageGb > 0 ? x.Variant.StorageGb : null,
+                Color: string.IsNullOrWhiteSpace(x.Variant.Color) ? null : x.Variant.Color,
+                ShippingText: x.Offer.ShippingText ?? x.Offer.Store.ShippingInfo,
+                GuaranteeText: x.Offer.GuaranteeText ?? "2 Yıl Resmi Distribütör Garantili",
+                InstallmentText: x.Offer.InstallmentText,
+                IsOfficial: x.Offer.IsOfficial || x.Offer.Store.IsVerified,
+                LastCheckedAt: x.Offer.LastCheckedAt
+            ))
+            .ToList();
+
+        var lowestPrice = offerItems.Any() 
+            ? offerItems.Min(o => o.Price) 
+            : (product.Variants.Any() ? product.Variants.Min(v => v.LowestPrice) : 0m);
+
+        var highestPrice = offerItems.Any() 
+            ? offerItems.Max(o => o.Price) 
+            : (product.Variants.Any() ? product.Variants.Max(v => v.HighestPrice) : 0m);
+
+        var response = new PhonePricesResponseDto(
+            PhoneId: product.Id,
+            PhoneName: product.Name,
+            Slug: product.Slug,
+            Brand: product.Brand?.Name ?? string.Empty,
+            BrandSlug: product.Brand?.Slug ?? string.Empty,
+            ImageUrl: product.ImageUrl,
+            LowestPrice: lowestPrice,
+            HighestPrice: highestPrice,
+            TotalStores: offerItems.Select(o => o.StoreSlug).Distinct().Count(),
+            TotalOffers: offerItems.Count,
+            StorePrices: offerItems
+        );
 
         await _cache.SetAsync(cacheKey, response, TimeSpan.FromMinutes(10), cancellationToken);
         return Result.Success(response);

@@ -42,7 +42,7 @@ public static class MarketAggregator
         ["iphone-14"] = "/cep-telefonu/en-ucuz-iphone-14-128-gb-gece-yarisi-fiyati,2078289380.html",
         ["iphone-13"] = "/cep-telefonu/en-ucuz-iphone-13-fiyati,1101115595.html",
         ["iphone-air"] = "/cep-telefonu/en-ucuz-iphone-air-fiyati,732494413.html",
-        ["samsung-galaxy-s25"] = "/cep-telefonu/en-ucuz-samsung-galaxy-s25-plus-fiyati,917798760.html",
+        ["samsung-galaxy-s25"] = "/cep-telefonu/en-ucuz-samsung-galaxy-s25-fiyati,2095843206.html",
         ["samsung-galaxy-s25-phone-015"] = "/cep-telefonu/en-ucuz-samsung-galaxy-s25-fiyati,2095843206.html",
         ["samsung-galaxy-s24-fe"] = "/cep-telefonu/en-ucuz-samsung-galaxy-s24-fe-fiyati,614642333.html",
         ["samsung-galaxy-s23-fe"] = "/cep-telefonu/en-ucuz-samsung-galaxy-s23-fe-256-gb-siyah-fiyati,313772219.html",
@@ -91,9 +91,33 @@ public static class MarketAggregator
         HttpClient.DefaultRequestHeaders.Add("Accept-Language", "tr-TR,tr;q=0.9,en-US;q=0.8");
     }
 
-    public record AggregatedMarketOffer(string StoreSlug, string StoreName, string SellerName, decimal Price, string Url, bool IsDirectProductUrl = false, string? Title = null, int StorageGb = 0);
+    public record AggregatedMarketOffer(
+        string StoreSlug, string StoreName, string SellerName, decimal Price, string Url,
+        bool IsDirectProductUrl = false, string? Title = null, int StorageGb = 0);
+
+    public static int? ExtractStorageGb(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return null;
+
+        int? best = null;
+        foreach (Match m in Regex.Matches(text, @"(?<n>\d{1,4})\s*(?<u>gb|tb)\b", RegexOptions.IgnoreCase))
+        {
+            var n = int.Parse(m.Groups["n"].Value);
+            var gb = m.Groups["u"].Value.Equals("tb", StringComparison.OrdinalIgnoreCase) ? n * 1024 : n;
+            if (gb >= 32 && (best is null || gb > best)) best = gb;
+        }
+
+        return best;
+    }
+
+    private static string OfferKey(AggregatedMarketOffer o) => $"{o.StoreSlug}|{(o.StorageGb > 0 ? o.StorageGb.ToString() : "-")}";
 
     private record SeedPhoneEntry(string Slug, string Name, decimal LowestPrice, IReadOnlyList<AggregatedMarketOffer> Offers);
+
+    public static bool IsSyntheticUrl(string? url)
+    {
+        return EnUcuzTelefon.Shared.Utils.StoreUrlHelper.IsSyntheticUrl(url);
+    }
 
     public static bool IsDirectProductUrl(string? url)
     {
@@ -177,26 +201,35 @@ public static class MarketAggregator
     public static bool IsRefurbishedOrUsed(string? text, string? url = null)
     {
         var combined = $"{text} {url}".ToLowerInvariant();
-        return combined.Contains("yenilenmiş") ||
-               combined.Contains("yenilenmis") ||
-               combined.Contains("ikinci el") ||
-               combined.Contains("ikinci-el") ||
-               combined.Contains("a kalite") ||
-               combined.Contains("a-kalite") ||
-               combined.Contains("b kalite") ||
-               combined.Contains("b-kalite") ||
-               combined.Contains("c kalite") ||
-               combined.Contains("c-kalite") ||
-               combined.Contains("teşhir") ||
-               combined.Contains("teshir") ||
-               combined.Contains("outlet");
+        if (combined.Contains("yenilenmiş") ||
+            combined.Contains("yenilenmis") ||
+            combined.Contains("refurbished") ||
+            combined.Contains("renewed") ||
+            combined.Contains("open box") ||
+            combined.Contains("açık kutu") ||
+            combined.Contains("2. el") ||
+            combined.Contains("2.el") ||
+            combined.Contains("ikinci el") ||
+            combined.Contains("ikinci-el") ||
+            combined.Contains("kullanılmış") ||
+            combined.Contains("sıfır ayarında") ||
+            combined.Contains("hasarlı kutu") ||
+            combined.Contains("teşhir") ||
+            combined.Contains("teshir") ||
+            combined.Contains("outlet"))
+        {
+            return true;
+        }
+
+        return Regex.IsMatch(combined, @"\b[abc]\s*-?\s*kalite\b");
     }
 
     private static readonly string[] ModelTierKeywords =
     {
         "redmi", "note", "lite", "mini", "fe", "se", "plus", "ultra", "max", "pro",
         "fold", "flip", "neo", "gt", "nova", "reno", "spark", "camon", "blade", "focus",
-        "zenfone", "rog", "razr", "edge", "moto", "nord", "open", "xperia", "pixel", "pova", "narzo"
+        "zenfone", "rog", "razr", "edge", "moto", "nord", "open", "xperia", "pixel", "pova", "narzo",
+        "air", "turbo", "speed", "ace", "power", "prime", "play", "go"
     };
 
     private static readonly HashSet<string> IgnoredQueryTokens = new(StringComparer.OrdinalIgnoreCase)
@@ -243,7 +276,7 @@ public static class MarketAggregator
         }
 
         // Prevent iPhone SE (4. Nesil) from matching iPhone SE 2020 / SE 2 / SE 3
-        if (q.Contains("se") && (c.Contains("2020") || c.Contains("2022") || c.Contains("se 2") || c.Contains("se 3")))
+        if (Regex.IsMatch(q, @"\bse\b") && (c.Contains("2020") || c.Contains("2022") || c.Contains("se 2") || c.Contains("se 3")))
         {
             return false;
         }
@@ -257,41 +290,42 @@ public static class MarketAggregator
         string query,
         CancellationToken cancellationToken = default)
     {
-        if (!AllowedStoreSlugs.Contains(storeSlug))
-        {
-            return Array.Empty<StoreRawProduct>();
-        }
+        if (!AllowedStoreSlugs.Contains(storeSlug)) return Array.Empty<StoreRawProduct>();
 
         var cleanQuery = query.Trim();
+        var requestedStorage = ExtractStorageGb(cleanQuery);
         var allOffers = await FetchMarketOffersForQueryAsync(cleanQuery, null, cancellationToken);
 
-        var matchingStoreOffers = allOffers
+        var matching = allOffers
             .Where(o => o.StoreSlug.Equals(storeSlug, StringComparison.OrdinalIgnoreCase))
+            // Depolama istendiyse yalnızca AYNI depolamalı teklif. Bilinmeyen (seed / etiketsiz) teklif doğrulama
+            // yolunda kullanılmaz: "veri yoksa yoktur".
+            .Where(o => requestedStorage is null || o.StorageGb == requestedStorage)
+            .Where(o => o.Title is null || IsModelMatch(StripStorageSuffix(cleanQuery), o.Title, o.Url))
             .OrderByDescending(o => o.IsDirectProductUrl)
             .ThenBy(o => o.Price)
             .ToList();
 
-        if (matchingStoreOffers.Any())
-        {
-            return matchingStoreOffers.Select(o => new StoreRawProduct(
-                ExternalId: $"{storeSlug.ToUpperInvariant()}-{Math.Abs((o.Url + o.Price).GetHashCode()):X8}",
-                Title: cleanQuery,
-                Url: o.Url,
-                Price: o.Price,
-                SellerName: !string.IsNullOrWhiteSpace(o.SellerName) ? o.SellerName : $"{storeName} Resmi Satıcı",
-                InStock: true,
-                ImageUrl: null,
-                Brand: null,
-                Model: null,
-                RamGb: 0,
-                StorageGb: 0,
-                Color: null,
-                RawJson: null
-            )).ToList();
-        }
+        return matching.Select(o => new StoreRawProduct(
+            ExternalId: StableId(storeSlug, o.Url),
+            Title: o.Title ?? cleanQuery,
+            Url: o.Url,
+            Price: o.Price,
+            SellerName: !string.IsNullOrWhiteSpace(o.SellerName) ? o.SellerName : $"{storeName} Resmi Satıcı",
+            InStock: true,
+            ImageUrl: null,
+            Brand: null,
+            Model: null,
+            RamGb: 0,
+            StorageGb: o.StorageGb,
+            Color: null,
+            RawJson: null)).ToList();
+    }
 
-        // Data yoksa yoktur: Mağazanın doğrulanmış gerçek teklifi yoksa sahte fallback fiyat/link üretilmez.
-        return Array.Empty<StoreRawProduct>();
+    private static string StableId(string storeSlug, string url)
+    {
+        var bytes = System.Security.Cryptography.SHA1.HashData(System.Text.Encoding.UTF8.GetBytes(url));
+        return $"{storeSlug.ToUpperInvariant()}-{Convert.ToHexString(bytes)[..8]}";
     }
 
     public static async Task<IReadOnlyList<AggregatedMarketOffer>> FetchMarketOffersForQueryAsync(
@@ -313,10 +347,11 @@ public static class MarketAggregator
         {
             foreach (var seedOffer in seedEntry.Offers)
             {
-                if (!offersByStore.ContainsKey(seedOffer.StoreSlug) ||
-                    (seedOffer.IsDirectProductUrl && !offersByStore[seedOffer.StoreSlug].IsDirectProductUrl))
+                var k = OfferKey(seedOffer);
+                if (!offersByStore.ContainsKey(k) ||
+                    (seedOffer.IsDirectProductUrl && !offersByStore[k].IsDirectProductUrl))
                 {
-                    offersByStore[seedOffer.StoreSlug] = seedOffer;
+                    offersByStore[k] = seedOffer;
                 }
             }
         }
@@ -331,23 +366,27 @@ public static class MarketAggregator
             {
                 if (AllowedStoreSlugs.Contains(mo.StoreSlug))
                 {
-                    offersByStore["mediamarkt"] = mo;
+                    var k = OfferKey(mo);
+                    offersByStore[k] = mo;
                 }
             }
         }
         catch { /* graceful fallback */ }
 
         // 3. Live Akakçe Multi-Store Scrape (with rate-limiting semaphore so bursts never get blocked)
+        bool complete = false;
         try
         {
             var effectiveSlug = !string.IsNullOrWhiteSpace(knownSlug) ? knownSlug : seedEntry?.Slug;
             var akakceOffers = await ScrapeAkakceLiveAsync(query, effectiveSlug, cancellationToken);
-            foreach (var ao in akakceOffers)
+            complete = akakceOffers != null;
+            foreach (var ao in akakceOffers ?? Array.Empty<AggregatedMarketOffer>())
             {
                 if (!AllowedStoreSlugs.Contains(ao.StoreSlug))
                     continue;
 
-                if (!offersByStore.TryGetValue(ao.StoreSlug, out var existing) ||
+                var k = OfferKey(ao);
+                if (!offersByStore.TryGetValue(k, out var existing) ||
                     ao.IsDirectProductUrl ||
                     !existing.IsDirectProductUrl)
                 {
@@ -357,7 +396,7 @@ public static class MarketAggregator
                         : (existing != null && existing.IsDirectProductUrl ? existing.Url : ao.Url);
                     var isDirect = IsDirectProductUrl(bestUrl);
 
-                    offersByStore[ao.StoreSlug] = ao with
+                    offersByStore[k] = ao with
                     {
                         Url = bestUrl,
                         IsDirectProductUrl = isDirect
@@ -368,11 +407,12 @@ public static class MarketAggregator
         catch { /* graceful fallback */ }
 
         var results = offersByStore.Values
-            .Where(o => AllowedStoreSlugs.Contains(o.StoreSlug) && o.Price >= 1500 && o.IsDirectProductUrl)
-            .OrderBy(o => o.Price)
+            .Where(o => AllowedStoreSlugs.Contains(o.StoreSlug) && o.Price >= 1500 && !string.IsNullOrWhiteSpace(o.Url))
+            .OrderByDescending(o => o.IsDirectProductUrl)
+            .ThenBy(o => o.Price)
             .ToList();
 
-        if (results.Any())
+        if (results.Any() && complete)
         {
             Cache[key] = (DateTime.UtcNow, results);
         }
@@ -416,7 +456,7 @@ public static class MarketAggregator
 
                         if (!string.IsNullOrWhiteSpace(name) && !string.IsNullOrWhiteSpace(prodUrl) && price >= 3000 && IsModelMatch(query, name, prodUrl))
                         {
-                            var storage = BaseStoreAdapter.ExtractStorage(name);
+                            var storage = ExtractStorageGb(name) ?? BaseStoreAdapter.ExtractStorage(name);
                             list.Add(new AggregatedMarketOffer("mediamarkt", "MediaMarkt", "MediaMarkt Resmi Mağaza", Math.Round(price, 2), prodUrl, true, name, storage));
                         }
                     }
@@ -425,20 +465,20 @@ public static class MarketAggregator
             catch { /* continue */ }
         }
 
-        return list;
+        return list.GroupBy(o => o.StorageGb).Select(g => g.OrderBy(o => o.Price).First()).ToList();
     }
 
-    private static async Task<IReadOnlyList<AggregatedMarketOffer>> ScrapeAkakceLiveAsync(
+    private static async Task<IReadOnlyList<AggregatedMarketOffer>?> ScrapeAkakceLiveAsync(
         string query,
         string? knownSlug,
         CancellationToken cancellationToken)
     {
         var results = new List<AggregatedMarketOffer>();
 
-        // Only wait briefly for Akakce rate lock; if busy (e.g. during parallel test runs), skip live Akakce and use seed/Pazarama/MediaMarkt
+        // Only wait briefly for Akakce rate lock; if busy, return null so caller knows scrape did not complete
         if (!await AkakceRateLock.WaitAsync(TimeSpan.FromMilliseconds(1200), cancellationToken))
         {
-            return results;
+            return null;
         }
 
         try
@@ -484,35 +524,42 @@ public static class MarketAggregator
                         dtlHtml,
                         @"&quot;price&quot;:\[0,(?<price>[\d.]+)\],&quot;pgName&quot;:\[0,&quot;(?<name>[^&]+)&quot;\],&quot;vdCode&quot;:\[0,(?<vd>\d+)\],&quot;vdName&quot;:\[0,&quot;(?<store>[^&]+)&quot;\].*?&quot;s&quot;:\[0,(?<s>\d+)\],&quot;v&quot;:\[0,(?<v>\d+)\],&quot;p&quot;:\[0,(?<p>\d+)\],&quot;c&quot;:\[0,(?<c>\d+)\],&quot;g&quot;:\[0,(?<g>\d+)\],&quot;f&quot;:\[0,&quot;(?<f>[^&]+)&quot;\]");
 
-                    var seenSlugs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                    int resolvedRedirects = 0;
+                    var candidates = new List<(string Slug, string Title, decimal Price, int? Storage, Match M)>();
 
                     foreach (Match mOffer in offerMatches)
                     {
                         var rawStore = WebUtility.HtmlDecode(mOffer.Groups["store"].Value).Trim();
                         var rawTitle = WebUtility.HtmlDecode(mOffer.Groups["name"].Value).Trim();
-                        var priceStr = mOffer.Groups["price"].Value;
 
-                        if (!decimal.TryParse(priceStr, NumberStyles.Any, CultureInfo.InvariantCulture, out var price) || price < 3000)
+                        if (!decimal.TryParse(mOffer.Groups["price"].Value, NumberStyles.Any, CultureInfo.InvariantCulture, out var price) || price < 3000)
                             continue;
-
-                        if (IsRefurbishedOrUsed(rawTitle))
-                            continue;
+                        if (IsRefurbishedOrUsed(rawTitle)) continue;
 
                         var mappedSlug = MapStoreSlug(rawStore, "");
-                        if (string.IsNullOrWhiteSpace(mappedSlug) || !seenSlugs.Add(mappedSlug))
-                            continue;
+                        if (string.IsNullOrWhiteSpace(mappedSlug) || !AllowedStoreSlugs.Contains(mappedSlug)) continue;
 
+                        candidates.Add((mappedSlug, rawTitle, price, ExtractStorageGb(rawTitle), mOffer));
+                    }
+
+                    var best = candidates
+                        .GroupBy(c => (c.Slug, c.Storage))
+                        .Select(g => g.OrderBy(c => c.Price).First())
+                        .OrderBy(c => c.Price)
+                        .ToList();
+
+                    int resolvedRedirects = 0;
+                    foreach (var c in best)
+                    {
                         string? directUrl = null;
-                        if (resolvedRedirects < 8)
+                        if (resolvedRedirects < 12)
                         {
                             directUrl = await TryResolveAkakceDirectUrlAsync(
-                                mOffer.Groups["s"].Value,
-                                mOffer.Groups["v"].Value,
-                                mOffer.Groups["p"].Value,
-                                mOffer.Groups["c"].Value,
-                                mOffer.Groups["g"].Value,
-                                mOffer.Groups["f"].Value,
+                                c.M.Groups["s"].Value,
+                                c.M.Groups["v"].Value,
+                                c.M.Groups["p"].Value,
+                                c.M.Groups["c"].Value,
+                                c.M.Groups["g"].Value,
+                                c.M.Groups["f"].Value,
                                 cancellationToken);
 
                             if (!string.IsNullOrWhiteSpace(directUrl))
@@ -524,16 +571,16 @@ public static class MarketAggregator
                         if (string.IsNullOrWhiteSpace(directUrl))
                             continue;
 
-                        var displayName = GetStoreDisplayName(mappedSlug);
-                        var storageGb = BaseStoreAdapter.ExtractStorage(rawTitle);
+                        var displayName = GetStoreDisplayName(c.Slug);
+                        var storageGb = c.Storage ?? BaseStoreAdapter.ExtractStorage(c.Title);
                         results.Add(new AggregatedMarketOffer(
-                            mappedSlug,
+                            c.Slug,
                             displayName,
                             $"{displayName} Doğrulanmış Satıcı",
-                            Math.Round(price, 2),
+                            Math.Round(c.Price, 2),
                             directUrl,
                             true,
-                            rawTitle,
+                            c.Title,
                             storageGb));
                     }
                 }
@@ -854,10 +901,7 @@ public static class MarketAggregator
                         if (!string.IsNullOrWhiteSpace(stSlug) && AllowedStoreSlugs.Contains(stSlug) && p > 0 && !string.IsNullOrWhiteSpace(u))
                         {
                             var isDirect = IsDirectProductUrl(u);
-                            if (isDirect)
-                            {
-                                offers.Add(new AggregatedMarketOffer(stSlug, stName, seller, p, u, true));
-                            }
+                            offers.Add(new AggregatedMarketOffer(stSlug, stName, seller, p, u, isDirect, name, ExtractStorageGb(name) ?? 0));
                         }
                     }
                 }

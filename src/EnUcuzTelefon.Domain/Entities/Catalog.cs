@@ -86,6 +86,7 @@ public class ProductVariant : BaseEntity, IAggregateRoot
     public decimal? PreviousLowestPrice { get; set; }
     public int PriceDropPercent { get; set; }
     public bool IsPriceDropped { get; set; }
+    public DateTime? PriceDropDetectedAt { get; set; }
     public string? LowestPriceStoreName { get; set; }
     public string? LowestPriceUrl { get; set; }
 
