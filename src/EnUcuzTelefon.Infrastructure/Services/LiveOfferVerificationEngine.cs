@@ -100,6 +100,13 @@ public class LiveOfferVerificationEngine : ILiveOfferVerificationEngine
             return await RepairOrDeadAsync("InvalidOrNonDirectUrl");
         }
 
+        // 0b. Açıklayıcı URL slug'ı doğrudan başka modele/tier'a işaret ediyorsa (ör. S25 vs S25+, Nothing Phone 1 vs CMF Phone 1)
+        if (HasDescriptiveUrlModelMismatch(phoneName, url))
+        {
+            _logger.LogWarning("URL slug model mismatch for '{Phone}': {Url}", phoneName, url);
+            return await RepairOrDeadAsync("ProductMismatch");
+        }
+
         FetchResult fetch;
         try
         {
@@ -241,6 +248,26 @@ public class LiveOfferVerificationEngine : ILiveOfferVerificationEngine
         if (!m.Success) return null;
         var text = WebUtility.HtmlDecode(TagStrip.Replace(m.Groups["t"].Value, " "));
         return Regex.Replace(text, @"\s+", " ").Trim();
+    }
+
+    private static bool HasDescriptiveUrlModelMismatch(string phoneName, string url)
+    {
+        if (string.IsNullOrWhiteSpace(phoneName) || !Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            return false;
+
+        var host = uri.Host.ToLowerInvariant();
+        if (!host.Contains("mediamarkt.com.tr") &&
+            !host.Contains("n11.com") &&
+            !host.Contains("trendyol.com") &&
+            !host.Contains("hepsiburada.com") &&
+            !host.Contains("teknosa.com") &&
+            !host.Contains("pttavm.com"))
+        {
+            return false;
+        }
+
+        var slug = uri.AbsolutePath.Replace('/', ' ').Replace('-', ' ').Replace('_', ' ');
+        return !MarketAggregator.IsModelMatch(phoneName, slug, url);
     }
 
     private static bool IsRefurbishedPageHtml(string html)

@@ -217,6 +217,8 @@ public class PriceVerificationTests
     [InlineData("Samsung Galaxy S25+", "SAMSUNG Galaxy S25 12 GB 256 GB Akıllı Telefon", false)]
     [InlineData("OPPO Reno 12 Pro 5G", "OPPO Reno 15 Pro 5G 12/512 GB Akıllı Telefon", false)]
     [InlineData("iPhone 16 Pro Max", "APPLE iPhone 16 Pro Max 256 GB Akıllı Telefon (yenilegelsin)", false)]
+    [InlineData("Samsung Galaxy S25+", "samsung galaxy s25 12 gb 256 gb samsung turkiye garantili 66614974", false)]
+    [InlineData("CMF Phone 1", "nothing phone 1 8 gb 128 gb akilli telefon turuncu 173497740.html", false)]
     public void IsModelMatch_ShouldRejectMismatchedModelsAndTiers(string query, string candidateTitle, bool expected)
     {
         EnUcuzTelefon.Infrastructure.Adapters.MarketAggregator.IsModelMatch(query, candidateTitle).Should().Be(expected);
