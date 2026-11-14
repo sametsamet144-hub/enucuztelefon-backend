@@ -216,7 +216,10 @@ public static class MarketAggregator
             combined.Contains("hasarlı kutu") ||
             combined.Contains("teşhir") ||
             combined.Contains("teshir") ||
-            combined.Contains("outlet"))
+            combined.Contains("outlet") ||
+            combined.Contains("yenilegelsin") ||
+            combined.Contains("easycep") ||
+            combined.Contains("getmobil"))
         {
             return true;
         }
@@ -448,13 +451,32 @@ public static class MarketAggregator
                         var name = item.TryGetProperty("name", out var nEl) ? nEl.GetString() : null;
                         var prodUrl = item.TryGetProperty("url", out var uEl) ? uEl.GetString() : null;
                         decimal price = 0;
-                        if (item.TryGetProperty("offers", out var offEl) && offEl.TryGetProperty("price", out var pEl))
+                        bool isRefurbished = false;
+                        if (item.TryGetProperty("offers", out var offEl))
                         {
-                            if (pEl.ValueKind == JsonValueKind.Number) price = pEl.GetDecimal();
-                            else if (decimal.TryParse(pEl.GetString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var parsed)) price = parsed;
+                            if (offEl.TryGetProperty("price", out var pEl))
+                            {
+                                if (pEl.ValueKind == JsonValueKind.Number) price = pEl.GetDecimal();
+                                else if (decimal.TryParse(pEl.GetString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var parsed)) price = parsed;
+                            }
+                            if (offEl.TryGetProperty("itemCondition", out var condEl) && condEl.ValueKind == JsonValueKind.String)
+                            {
+                                var cond = condEl.GetString() ?? "";
+                                if (cond.Contains("Refurbished", StringComparison.OrdinalIgnoreCase) ||
+                                    cond.Contains("Used", StringComparison.OrdinalIgnoreCase) ||
+                                    cond.Contains("Damaged", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    isRefurbished = true;
+                                }
+                            }
                         }
 
-                        if (!string.IsNullOrWhiteSpace(name) && !string.IsNullOrWhiteSpace(prodUrl) && price >= 3000 && IsModelMatch(query, name, prodUrl))
+                        if (!isRefurbished &&
+                            !string.IsNullOrWhiteSpace(name) &&
+                            !string.IsNullOrWhiteSpace(prodUrl) &&
+                            price >= 3000 &&
+                            !IsRefurbishedOrUsed(name, prodUrl) &&
+                            IsModelMatch(query, name, prodUrl))
                         {
                             var storage = ExtractStorageGb(name) ?? BaseStoreAdapter.ExtractStorage(name);
                             list.Add(new AggregatedMarketOffer("mediamarkt", "MediaMarkt", "MediaMarkt Resmi Mağaza", Math.Round(price, 2), prodUrl, true, name, storage));

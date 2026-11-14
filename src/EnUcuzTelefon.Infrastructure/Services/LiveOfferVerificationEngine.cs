@@ -139,6 +139,14 @@ public class LiveOfferVerificationEngine : ILiveOfferVerificationEngine
         var info = ExtractProductInfo(html, meta, pageTitle, storeSlug);
 
         // 6. Kimlik kontrolü: link artık başka model/depolama/yenilenmiş ürüne mi gidiyor?
+        if (info.IsRefurbishedOrUsed ||
+            MarketAggregator.IsRefurbishedOrUsed(info.Name, fetch.FinalUrl) ||
+            IsRefurbishedPageHtml(html))
+        {
+            _logger.LogWarning("Refurbished/used offer rejected at {Url} ({Title})", url, info.Name);
+            return await RepairOrDeadAsync("RefurbishedOrUsed");
+        }
+
         if (!string.IsNullOrWhiteSpace(info.Name))
         {
             var modelOk = MarketAggregator.IsModelMatch(phoneName, info.Name, fetch.FinalUrl);
@@ -235,35 +243,47 @@ public class LiveOfferVerificationEngine : ILiveOfferVerificationEngine
         return Regex.Replace(text, @"\s+", " ").Trim();
     }
 
+    private static bool IsRefurbishedPageHtml(string html)
+    {
+        return html.Contains("schema.org/RefurbishedCondition", StringComparison.OrdinalIgnoreCase)
+            || html.Contains("schema.org/UsedCondition", StringComparison.OrdinalIgnoreCase)
+            || html.Contains("schema.org/DamagedCondition", StringComparison.OrdinalIgnoreCase)
+            || html.Contains("Yenilenmiş: Mükemmel", StringComparison.OrdinalIgnoreCase)
+            || html.Contains("Yenilenmiş: Çok İyi", StringComparison.OrdinalIgnoreCase)
+            || html.Contains("Yenilenmiş: İyi", StringComparison.OrdinalIgnoreCase)
+            || html.Contains("Satış ve sevkiyat yenilegelsin", StringComparison.OrdinalIgnoreCase);
+    }
+
     // ── Ürün bilgisi çıkarımı ───────────────────────────────────────────────
-    private sealed record ProductInfo(string? Name, decimal? Price, bool? InStock, string Source);
+    private sealed record ProductInfo(string? Name, decimal? Price, bool? InStock, string Source, bool IsRefurbishedOrUsed = false);
 
     private static ProductInfo ExtractProductInfo(string html, Dictionary<string, string> meta, string? pageTitle, string storeSlug)
     {
         var ld = ExtractFromJsonLd(html);
         meta.TryGetValue("og:title", out var ogTitle);
         var name = ld?.Name ?? ogTitle ?? pageTitle;
+        var isRefurbished = ld?.IsRefurbishedOrUsed ?? false;
 
         if (ld?.Price != null)
-            return new ProductInfo(name, ld.Price, ld.InStock, "JsonLdProduct");
+            return new ProductInfo(name, ld.Price, ld.InStock, "JsonLdProduct", isRefurbished);
 
         foreach (var key in new[] { "product:price:amount", "og:price:amount", "product:sale_price:amount", "price" })
         {
             if (meta.TryGetValue(key, out var raw) && ParseTurkishPrice(raw) is { } mp)
-                return new ProductInfo(name, mp, ld?.InStock, "MetaTag");
+                return new ProductInfo(name, mp, ld?.InStock, "MetaTag", isRefurbished);
         }
 
         if (StorePricePatterns.TryGetValue(storeSlug, out var rx))
         {
             var m = rx.Match(html);
             if (m.Success && ParseTurkishPrice(m.Groups["price"].Value) is { } sp)
-                return new ProductInfo(name, sp, ld?.InStock, "StoreMarkup");
+                return new ProductInfo(name, sp, ld?.InStock, "StoreMarkup", isRefurbished);
         }
 
-        return new ProductInfo(name, null, ld?.InStock, "NoPrice");
+        return new ProductInfo(name, null, ld?.InStock, "NoPrice", isRefurbished);
     }
 
-    private sealed record JsonLdProduct(string? Name, decimal? Price, bool? InStock);
+    private sealed record JsonLdProduct(string? Name, decimal? Price, bool? InStock, bool IsRefurbishedOrUsed = false);
 
     private static JsonLdProduct? ExtractFromJsonLd(string html)
     {
@@ -274,15 +294,16 @@ public class LiveOfferVerificationEngine : ILiveOfferVerificationEngine
                 using var doc = JsonDocument.Parse(m.Groups["json"].Value.Trim());
                 foreach (var node in EnumerateNodes(doc.RootElement))
                 {
-                    if (!HasType(node, "Product")) continue;
+                    if (!HasType(node, "Product") && !HasType(node, "ProductGroup")) continue;
 
                     var name = node.TryGetProperty("name", out var n) && n.ValueKind == JsonValueKind.String ? n.GetString() : null;
                     decimal? price = null;
                     bool? inStock = null;
+                    bool isRefurbished = false;
                     if (node.TryGetProperty("offers", out var offers))
-                        (price, inStock) = ReadOffers(offers);
+                        (price, inStock, isRefurbished) = ReadOffers(offers);
 
-                    return new JsonLdProduct(name, price, inStock);
+                    return new JsonLdProduct(name, price, inStock, isRefurbished);
                 }
             }
             catch (JsonException) { /* bozuk JSON-LD bloğunu atla */ }
@@ -305,6 +326,9 @@ public class LiveOfferVerificationEngine : ILiveOfferVerificationEngine
             if (el.TryGetProperty("@graph", out var g))
                 foreach (var y in EnumerateNodes(g))
                     yield return y;
+            if (el.TryGetProperty("object", out var obj))
+                foreach (var y in EnumerateNodes(obj))
+                    yield return y;
         }
     }
 
@@ -320,10 +344,11 @@ public class LiveOfferVerificationEngine : ILiveOfferVerificationEngine
         };
     }
 
-    private static (decimal? Price, bool? InStock) ReadOffers(JsonElement offers)
+    private static (decimal? Price, bool? InStock, bool IsRefurbishedOrUsed) ReadOffers(JsonElement offers)
     {
         var prices = new List<decimal>();
         var stocks = new List<bool>();
+        var isRefurbished = false;
 
         void Collect(JsonElement o)
         {
@@ -334,6 +359,24 @@ public class LiveOfferVerificationEngine : ILiveOfferVerificationEngine
             }
 
             if (o.ValueKind != JsonValueKind.Object) return;
+
+            if (o.TryGetProperty("itemCondition", out var cond) && cond.ValueKind == JsonValueKind.String)
+            {
+                var c = cond.GetString() ?? "";
+                if (c.Contains("Refurbished", StringComparison.OrdinalIgnoreCase) ||
+                    c.Contains("Used", StringComparison.OrdinalIgnoreCase) ||
+                    c.Contains("Damaged", StringComparison.OrdinalIgnoreCase))
+                {
+                    isRefurbished = true;
+                }
+            }
+
+            if (o.TryGetProperty("seller", out var seller) && seller.ValueKind == JsonValueKind.Object &&
+                seller.TryGetProperty("name", out var sName) && sName.ValueKind == JsonValueKind.String &&
+                MarketAggregator.IsRefurbishedOrUsed(sName.GetString()))
+            {
+                isRefurbished = true;
+            }
 
             foreach (var key in new[] { "price", "lowPrice" })
             {
@@ -363,15 +406,15 @@ public class LiveOfferVerificationEngine : ILiveOfferVerificationEngine
 
         bool? inStock = stocks.Count == 0 ? null : stocks.Any(x => x);
 
-        if (prices.Count == 0) return (null, inStock);
+        if (prices.Count == 0) return (null, inStock, isRefurbished);
 
         var min = prices.Min();
         var max = prices.Max();
 
         // Teklifler arasında %15'ten fazla fark varsa (farklı depolama/varyant karışmış olabilir) fiyat BELİRSİZ.
-        if (max > min * 1.15m) return (null, inStock);
+        if (max > min * 1.15m) return (null, inStock, isRefurbished);
 
-        return (min, inStock);
+        return (min, inStock, isRefurbished);
     }
 
     private static bool TryReadPrice(JsonElement p, out decimal value)

@@ -12,7 +12,7 @@ public static class OfferTrust
 {
     /// <summary>Doğrulanmamış teklif yayınlanmaz. Geçiş döneminde false yapılabilir, kalıcı olarak true olmalı.</summary>
     public static bool RequireVerified = false;
-    public static readonly TimeSpan MaxAge = TimeSpan.FromHours(168);
+    public static readonly TimeSpan MaxAge = TimeSpan.FromHours(48);
 
     private static readonly HashSet<string> DisallowedStoreSlugs = new(StringComparer.OrdinalIgnoreCase)
     { "bim", "a101", "sok", "evkur", "yonavm", "mutluevim", "arcelik", "beko", "vestel" };
@@ -336,9 +336,10 @@ public class ProductService : IProductService
                 if (!storeBySlug.TryGetValue(item.StoreSlug, out var store)) continue;
                 if (OfferTrust.LooksGenerated(item.Url)) continue;
 
-                var targetVariant = (item.StorageGb > 0
+                var targetVariant = item.StorageGb is > 0
                     ? trackedProduct.Variants.FirstOrDefault(v => v.StorageGb == item.StorageGb)
-                    : null) ?? defaultVariant;
+                    : defaultVariant;
+                if (targetVariant == null) continue;
 
                 var existing = targetVariant.Offers.FirstOrDefault(o => o.StoreId == store.Id);
                 if (existing == null)
