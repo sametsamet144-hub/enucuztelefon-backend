@@ -1,4 +1,5 @@
 using EnUcuzTelefon.Application.Services;
+using EnUcuzTelefon.Infrastructure.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EnUcuzTelefon.Api.Controllers;
@@ -33,6 +34,18 @@ public class AdminController : BaseApiController
     {
         var result = await _adminService.TriggerAllStoresSyncAsync(cancellationToken);
         return HandleResult(result);
+    }
+
+    [HttpPost("verify-offers")]
+    public async Task<IActionResult> TriggerOfferVerification(
+        [FromServices] OfferHealthSynchronizer healthSynchronizer,
+        [FromQuery] bool force = true,
+        [FromQuery] string? productSlug = null,
+        [FromQuery] int? batchSize = 50,
+        CancellationToken cancellationToken = default)
+    {
+        var checkedCount = await healthSynchronizer.RunAsync(force, productSlug, batchSize, cancellationToken);
+        return Ok(new { checkedCount, force, productSlug });
     }
 
     [HttpGet("anomalies")]

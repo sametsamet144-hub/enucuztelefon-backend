@@ -120,83 +120,7 @@ public static class MarketAggregator
     }
 
     public static bool IsDirectProductUrl(string? url)
-    {
-        if (string.IsNullOrWhiteSpace(url)) return false;
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)) return false;
-        if (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps) return false;
-
-        var u = url.ToLowerInvariant();
-        var host = uri.Host.ToLowerInvariant();
-        var path = uri.AbsolutePath.ToLowerInvariant();
-
-        // Reject non-phone supermarket / installment chains
-        if (host.Contains("bim.com.tr") ||
-            host.Contains("a101.com.tr") ||
-            host.Contains("sokmarket.com.tr") ||
-            host.Contains("kurumsalsok.com.tr") ||
-            host.Contains("evkur.com.tr") ||
-            host.Contains("yonavm.com.tr") ||
-            host.Contains("mutluevim.com.tr") ||
-            host.Contains("arcelik.com.tr") ||
-            host.Contains("beko.com.tr") ||
-            host.Contains("vestel.com.tr") ||
-            host.Contains("myepoint.com") ||
-            host.Contains("enucuztelefon.com"))
-        {
-            return false;
-        }
-
-        // Search or generic query / category / catalog fallback URLs
-        if (u.Contains("/arama") ||
-            u.Contains("/ara?") ||
-            u.Contains("/ara/") ||
-            u.Contains("/sr?q=") ||
-            u.Contains("/sr?") ||
-            u.Contains("/sr/") ||
-            u.Contains("/s?k=") ||
-            u.Contains("/s?") ||
-            u.Contains("search_text=") ||
-            u.Contains("search.html") ||
-            u.Contains("?query=") ||
-            u.Contains("&query=") ||
-            u.Contains("?text=") ||
-            u.Contains("&text=") ||
-            u.Contains("?q=") ||
-            u.Contains("&q=") ||
-            u.Contains("/categories/") ||
-            u.Contains("/kategori/") ||
-            u.Contains("/katalog/") ||
-            u.Contains("/kampanyalar/") ||
-            u.Contains("/faturaya-ek") ||
-            u.Contains("/cihazlar") ||
-            u.Contains("/mobil/cep-telefonu") ||
-            u.Contains("placeholder") ||
-            u.Contains("-10000000") ||
-            u.Contains("hbc0000100000"))
-        {
-            return false;
-        }
-
-        // Reject bare domain roots or generic brand pages
-        if (path == "/" || string.IsNullOrWhiteSpace(path) || path == "/tr" || path == "/tr/")
-        {
-            return false;
-        }
-        if (u.EndsWith("apple.com/tr/iphone") || u.EndsWith("apple.com/tr/iphone/"))
-        {
-            return false;
-        }
-        if (u.EndsWith("shop.samsung.com/tr") || u.EndsWith("shop.samsung.com/tr/"))
-        {
-            return false;
-        }
-        if (u.Contains("mi.com/tr/phone"))
-        {
-            return false;
-        }
-
-        return true;
-    }
+        => EnUcuzTelefon.Shared.Utils.StoreUrlHelper.IsDirectProductUrl(url);
 
     public static bool IsRefurbishedOrUsed(string? text, string? url = null)
     {
@@ -216,7 +140,10 @@ public static class MarketAggregator
             combined.Contains("hasarlı kutu") ||
             combined.Contains("teşhir") ||
             combined.Contains("teshir") ||
-            combined.Contains("outlet"))
+            combined.Contains("outlet") ||
+            combined.Contains("yenilegelsin") ||
+            combined.Contains("easycep") ||
+            combined.Contains("getmobil"))
         {
             return true;
         }
@@ -229,7 +156,7 @@ public static class MarketAggregator
         "redmi", "note", "lite", "mini", "fe", "se", "plus", "ultra", "max", "pro",
         "fold", "flip", "neo", "gt", "nova", "reno", "spark", "camon", "blade", "focus",
         "zenfone", "rog", "razr", "edge", "moto", "nord", "open", "xperia", "pixel", "pova", "narzo",
-        "air", "turbo", "speed", "ace", "power", "prime", "play", "go"
+        "air", "turbo", "speed", "ace", "power", "prime", "play", "go", "cmf"
     };
 
     private static readonly HashSet<string> IgnoredQueryTokens = new(StringComparer.OrdinalIgnoreCase)
@@ -244,11 +171,15 @@ public static class MarketAggregator
         if (BaseStoreAdapter.IsAccessory(candidateTitle)) return false;
         if (IsRefurbishedOrUsed(candidateTitle, candidateUrl)) return false;
 
-        var q = Regex.Replace(query.ToLowerInvariant().Replace('-', ' '), @"\(.*?\)", " ");
+        var q = Regex.Replace(query.ToLowerInvariant().Replace('-', ' '), @"\(\s*4\.\s*nesil\s*\)", " ");
+        q = q.Replace('(', ' ').Replace(')', ' ');
         q = Regex.Replace(q, @"\b(64|128|256|512|1024)\s*gb\b|\b1\s*tb\b", " ");
         q = Regex.Replace(q, @"\s+", " ").Trim();
 
-        var c = candidateTitle.ToLowerInvariant().Replace("ui", "ul").Replace('-', ' ');
+        var c = candidateTitle.ToLowerInvariant().Replace("ui", "ul").Replace('-', ' ').Replace('(', ' ').Replace(')', ' ');
+        // Strip RAM/storage specs (e.g. "12/512 gb", "12 gb", "8+256 gb") before token matching so "12 gb ram" doesn't match model "12"
+        c = Regex.Replace(c, @"\b\d+\s*[/+]\s*\d+\s*(?:gb|tb)?\b", " ");
+        c = Regex.Replace(c, @"\b\d+\s*(?:gb|tb)\b", " ");
         c = Regex.Replace(c, @"\s+", " ").Trim();
 
         foreach (var tier in ModelTierKeywords)
@@ -275,13 +206,38 @@ public static class MarketAggregator
             }
         }
 
-        // Prevent iPhone SE (4. Nesil) from matching iPhone SE 2020 / SE 2 / SE 3
+        // Prevent iPhone SE (4. Nesil) from matching older iPhone SE (2020/2022/64GB)
         if (Regex.IsMatch(q, @"\bse\b") && (c.Contains("2020") || c.Contains("2022") || c.Contains("se 2") || c.Contains("se 3")))
+        {
+            return false;
+        }
+        if (query.Contains("4. nesil", StringComparison.OrdinalIgnoreCase) &&
+            !c.Contains("4. nesil") && !c.Contains("4.nesil") && !c.Contains("2025"))
         {
             return false;
         }
 
         return true;
+    }
+
+    public static bool HasDescriptiveUrlModelMismatch(string query, string? url)
+    {
+        if (string.IsNullOrWhiteSpace(query) || string.IsNullOrWhiteSpace(url) || !Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            return false;
+
+        var host = uri.Host.ToLowerInvariant();
+        if (!host.Contains("mediamarkt.com.tr") &&
+            !host.Contains("n11.com") &&
+            !host.Contains("trendyol.com") &&
+            !host.Contains("hepsiburada.com") &&
+            !host.Contains("teknosa.com") &&
+            !host.Contains("pttavm.com"))
+        {
+            return false;
+        }
+
+        var slug = uri.AbsolutePath.Replace('/', ' ').Replace('-', ' ').Replace('_', ' ');
+        return !IsModelMatch(query, slug, url);
     }
 
     public static async Task<IReadOnlyList<StoreRawProduct>> GetOffersForStoreAsync(
@@ -407,7 +363,11 @@ public static class MarketAggregator
         catch { /* graceful fallback */ }
 
         var results = offersByStore.Values
-            .Where(o => AllowedStoreSlugs.Contains(o.StoreSlug) && o.Price >= 1500 && !string.IsNullOrWhiteSpace(o.Url))
+            .Where(o => AllowedStoreSlugs.Contains(o.StoreSlug) &&
+                        o.Price >= 1500 &&
+                        !string.IsNullOrWhiteSpace(o.Url) &&
+                        !HasDescriptiveUrlModelMismatch(cleanModelQuery, o.Url) &&
+                        (string.IsNullOrWhiteSpace(o.Title) || IsModelMatch(cleanModelQuery, o.Title, o.Url)))
             .OrderByDescending(o => o.IsDirectProductUrl)
             .ThenBy(o => o.Price)
             .ToList();
@@ -448,13 +408,32 @@ public static class MarketAggregator
                         var name = item.TryGetProperty("name", out var nEl) ? nEl.GetString() : null;
                         var prodUrl = item.TryGetProperty("url", out var uEl) ? uEl.GetString() : null;
                         decimal price = 0;
-                        if (item.TryGetProperty("offers", out var offEl) && offEl.TryGetProperty("price", out var pEl))
+                        bool isRefurbished = false;
+                        if (item.TryGetProperty("offers", out var offEl))
                         {
-                            if (pEl.ValueKind == JsonValueKind.Number) price = pEl.GetDecimal();
-                            else if (decimal.TryParse(pEl.GetString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var parsed)) price = parsed;
+                            if (offEl.TryGetProperty("price", out var pEl))
+                            {
+                                if (pEl.ValueKind == JsonValueKind.Number) price = pEl.GetDecimal();
+                                else if (decimal.TryParse(pEl.GetString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var parsed)) price = parsed;
+                            }
+                            if (offEl.TryGetProperty("itemCondition", out var condEl) && condEl.ValueKind == JsonValueKind.String)
+                            {
+                                var cond = condEl.GetString() ?? "";
+                                if (cond.Contains("Refurbished", StringComparison.OrdinalIgnoreCase) ||
+                                    cond.Contains("Used", StringComparison.OrdinalIgnoreCase) ||
+                                    cond.Contains("Damaged", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    isRefurbished = true;
+                                }
+                            }
                         }
 
-                        if (!string.IsNullOrWhiteSpace(name) && !string.IsNullOrWhiteSpace(prodUrl) && price >= 3000 && IsModelMatch(query, name, prodUrl))
+                        if (!isRefurbished &&
+                            !string.IsNullOrWhiteSpace(name) &&
+                            !string.IsNullOrWhiteSpace(prodUrl) &&
+                            price >= 3000 &&
+                            !IsRefurbishedOrUsed(name, prodUrl) &&
+                            IsModelMatch(query, name, prodUrl))
                         {
                             var storage = ExtractStorageGb(name) ?? BaseStoreAdapter.ExtractStorage(name);
                             list.Add(new AggregatedMarketOffer("mediamarkt", "MediaMarkt", "MediaMarkt Resmi Mağaza", Math.Round(price, 2), prodUrl, true, name, storage));
@@ -534,6 +513,7 @@ public static class MarketAggregator
                         if (!decimal.TryParse(mOffer.Groups["price"].Value, NumberStyles.Any, CultureInfo.InvariantCulture, out var price) || price < 3000)
                             continue;
                         if (IsRefurbishedOrUsed(rawTitle)) continue;
+                        if (!IsModelMatch(StripStorageSuffix(query), rawTitle)) continue;
 
                         var mappedSlug = MapStoreSlug(rawStore, "");
                         if (string.IsNullOrWhiteSpace(mappedSlug) || !AllowedStoreSlugs.Contains(mappedSlug)) continue;
