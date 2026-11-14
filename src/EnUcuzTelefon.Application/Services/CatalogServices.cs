@@ -333,6 +333,7 @@ public class ProductService : IProductService
             foreach (var item in liveOffers)
             {
                 if (!item.IsDirectProductUrl || item.Price < 1000) continue;
+                if (!EnUcuzTelefon.Shared.Utils.StoreUrlHelper.IsDirectProductUrl(item.Url)) continue;
                 if (!storeBySlug.TryGetValue(item.StoreSlug, out var store)) continue;
                 if (OfferTrust.LooksGenerated(item.Url)) continue;
 
@@ -368,6 +369,10 @@ public class ProductService : IProductService
                 }
                 else
                 {
+                    // Do not re-activate an offer URL that was explicitly deactivated by the live verification engine
+                    if (!existing.IsAvailable && string.Equals(existing.Url, item.Url, StringComparison.OrdinalIgnoreCase))
+                        continue;
+
                     existing.Price = item.Price;
                     existing.TotalCost = item.Price + existing.ShippingCost;
                     existing.Url = item.Url;
@@ -598,22 +603,27 @@ public class ProductService : IProductService
             return Result.Failure<PhonePricesResponseDto>(Error.NotFound("Product.NotFound", $"Phone with id '{phoneId}' was not found."));
         }
 
-        var offerItems = product.Variants
+        var nowUtc = DateTime.UtcNow;
+        var trustedEntries = product.Variants
             .SelectMany(v => v.Offers.Select(o => new { Offer = o, Variant = v }))
-            .Where(x => x.Offer != null && x.Offer.IsAvailable && x.Offer.Price > 0 && x.Offer.Store != null && !string.IsNullOrWhiteSpace(x.Offer.Url) && EnUcuzTelefon.Shared.Utils.StoreUrlHelper.IsDirectProductUrl(x.Offer.Url))
-            .GroupBy(x => x.Offer.Store.Slug, StringComparer.OrdinalIgnoreCase)
-            .Select(g => g
-                .OrderByDescending(x => EnUcuzTelefon.Shared.Utils.StoreUrlHelper.IsDirectProductUrl(x.Offer.Url))
-                .ThenBy(x => x.Offer.Price)
-                .First())
+            .Where(x => OfferTrust.IsTrusted(x.Offer, nowUtc))
+            .GroupBy(x => x.Offer.Store!.Slug, StringComparer.OrdinalIgnoreCase)
+            .Select(g => g.OrderBy(x => x.Offer.Price).First())
+            .ToList();
+
+        var trustedOffers = OfferTrust.RemoveOutliers(trustedEntries.Select(x => x.Offer).ToList());
+        var trustedSet = new HashSet<Guid>(trustedOffers.Select(o => o.Id));
+
+        var offerItems = trustedEntries
+            .Where(x => trustedSet.Contains(x.Offer.Id))
             .OrderBy(x => x.Offer.Price)
             .Select(x => new PhoneStorePriceItemDto(
-                Store: x.Offer.Store.Name,
+                Store: x.Offer.Store!.Name,
                 StoreSlug: x.Offer.Store.Slug,
                 StoreLogoUrl: x.Offer.Store.LogoUrl,
                 Price: x.Offer.Price,
                 OriginalPrice: x.Offer.OriginalPrice,
-                Url: EnUcuzTelefon.Shared.Utils.StoreUrlHelper.ResolveSafeStoreUrl(x.Offer.Store?.Slug ?? "", x.Offer.Url, product.Name),
+                Url: EnUcuzTelefon.Shared.Utils.StoreUrlHelper.ResolveSafeStoreUrl(x.Offer.Store.Slug, x.Offer.Url, product.Name),
                 SellerName: x.Offer.Seller?.Name ?? x.Offer.Store.Name,
                 SellerRating: x.Offer.Seller?.Rating ?? x.Offer.Store.ReliabilityScore,
                 IsAvailable: x.Offer.IsAvailable,
@@ -628,9 +638,9 @@ public class ProductService : IProductService
             ))
             .ToList();
 
-        var lowestPrice = offerItems.Any() 
-            ? offerItems.Min(o => o.Price) 
-            : (product.Variants.Any() ? product.Variants.Min(v => v.LowestPrice) : 0m);
+        var lowestPrice = offerItems.Any()
+            ? offerItems.Min(o => o.Price)
+            : 0m;
 
         var highestPrice = offerItems.Any() 
             ? offerItems.Max(o => o.Price) 

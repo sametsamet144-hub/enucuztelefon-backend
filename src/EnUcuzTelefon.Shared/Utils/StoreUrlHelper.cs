@@ -107,6 +107,7 @@ public static class StoreUrlHelper
             host.Contains("beko.com.tr") ||
             host.Contains("vestel.com.tr") ||
             host.Contains("myepoint.com") ||
+            host.Contains("my-store.vivo.com") ||
             host.Contains("enucuztelefon.com"))
         {
             return false;
@@ -135,7 +136,9 @@ public static class StoreUrlHelper
             u.Contains("/kampanyalar/") ||
             u.Contains("/faturaya-ek") ||
             u.Contains("/cihazlar") ||
-            u.Contains("/mobil/cep-telefonu"))
+            u.Contains("/mobil/cep-telefonu") ||
+            path.TrimEnd('/').EndsWith("/smartphones") ||
+            path.TrimEnd('/').EndsWith("/phones"))
         {
             return false;
         }

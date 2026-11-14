@@ -120,83 +120,7 @@ public static class MarketAggregator
     }
 
     public static bool IsDirectProductUrl(string? url)
-    {
-        if (string.IsNullOrWhiteSpace(url)) return false;
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)) return false;
-        if (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps) return false;
-
-        var u = url.ToLowerInvariant();
-        var host = uri.Host.ToLowerInvariant();
-        var path = uri.AbsolutePath.ToLowerInvariant();
-
-        // Reject non-phone supermarket / installment chains
-        if (host.Contains("bim.com.tr") ||
-            host.Contains("a101.com.tr") ||
-            host.Contains("sokmarket.com.tr") ||
-            host.Contains("kurumsalsok.com.tr") ||
-            host.Contains("evkur.com.tr") ||
-            host.Contains("yonavm.com.tr") ||
-            host.Contains("mutluevim.com.tr") ||
-            host.Contains("arcelik.com.tr") ||
-            host.Contains("beko.com.tr") ||
-            host.Contains("vestel.com.tr") ||
-            host.Contains("myepoint.com") ||
-            host.Contains("enucuztelefon.com"))
-        {
-            return false;
-        }
-
-        // Search or generic query / category / catalog fallback URLs
-        if (u.Contains("/arama") ||
-            u.Contains("/ara?") ||
-            u.Contains("/ara/") ||
-            u.Contains("/sr?q=") ||
-            u.Contains("/sr?") ||
-            u.Contains("/sr/") ||
-            u.Contains("/s?k=") ||
-            u.Contains("/s?") ||
-            u.Contains("search_text=") ||
-            u.Contains("search.html") ||
-            u.Contains("?query=") ||
-            u.Contains("&query=") ||
-            u.Contains("?text=") ||
-            u.Contains("&text=") ||
-            u.Contains("?q=") ||
-            u.Contains("&q=") ||
-            u.Contains("/categories/") ||
-            u.Contains("/kategori/") ||
-            u.Contains("/katalog/") ||
-            u.Contains("/kampanyalar/") ||
-            u.Contains("/faturaya-ek") ||
-            u.Contains("/cihazlar") ||
-            u.Contains("/mobil/cep-telefonu") ||
-            u.Contains("placeholder") ||
-            u.Contains("-10000000") ||
-            u.Contains("hbc0000100000"))
-        {
-            return false;
-        }
-
-        // Reject bare domain roots or generic brand pages
-        if (path == "/" || string.IsNullOrWhiteSpace(path) || path == "/tr" || path == "/tr/")
-        {
-            return false;
-        }
-        if (u.EndsWith("apple.com/tr/iphone") || u.EndsWith("apple.com/tr/iphone/"))
-        {
-            return false;
-        }
-        if (u.EndsWith("shop.samsung.com/tr") || u.EndsWith("shop.samsung.com/tr/"))
-        {
-            return false;
-        }
-        if (u.Contains("mi.com/tr/phone"))
-        {
-            return false;
-        }
-
-        return true;
-    }
+        => EnUcuzTelefon.Shared.Utils.StoreUrlHelper.IsDirectProductUrl(url);
 
     public static bool IsRefurbishedOrUsed(string? text, string? url = null)
     {
@@ -232,7 +156,7 @@ public static class MarketAggregator
         "redmi", "note", "lite", "mini", "fe", "se", "plus", "ultra", "max", "pro",
         "fold", "flip", "neo", "gt", "nova", "reno", "spark", "camon", "blade", "focus",
         "zenfone", "rog", "razr", "edge", "moto", "nord", "open", "xperia", "pixel", "pova", "narzo",
-        "air", "turbo", "speed", "ace", "power", "prime", "play", "go"
+        "air", "turbo", "speed", "ace", "power", "prime", "play", "go", "cmf"
     };
 
     private static readonly HashSet<string> IgnoredQueryTokens = new(StringComparer.OrdinalIgnoreCase)
@@ -247,11 +171,15 @@ public static class MarketAggregator
         if (BaseStoreAdapter.IsAccessory(candidateTitle)) return false;
         if (IsRefurbishedOrUsed(candidateTitle, candidateUrl)) return false;
 
-        var q = Regex.Replace(query.ToLowerInvariant().Replace('-', ' '), @"\(.*?\)", " ");
+        var q = Regex.Replace(query.ToLowerInvariant().Replace('-', ' '), @"\(\s*4\.\s*nesil\s*\)", " ");
+        q = q.Replace('(', ' ').Replace(')', ' ');
         q = Regex.Replace(q, @"\b(64|128|256|512|1024)\s*gb\b|\b1\s*tb\b", " ");
         q = Regex.Replace(q, @"\s+", " ").Trim();
 
-        var c = candidateTitle.ToLowerInvariant().Replace("ui", "ul").Replace('-', ' ');
+        var c = candidateTitle.ToLowerInvariant().Replace("ui", "ul").Replace('-', ' ').Replace('(', ' ').Replace(')', ' ');
+        // Strip RAM/storage specs (e.g. "12/512 gb", "12 gb", "8+256 gb") before token matching so "12 gb ram" doesn't match model "12"
+        c = Regex.Replace(c, @"\b\d+\s*[/+]\s*\d+\s*(?:gb|tb)?\b", " ");
+        c = Regex.Replace(c, @"\b\d+\s*(?:gb|tb)\b", " ");
         c = Regex.Replace(c, @"\s+", " ").Trim();
 
         foreach (var tier in ModelTierKeywords)
@@ -278,8 +206,13 @@ public static class MarketAggregator
             }
         }
 
-        // Prevent iPhone SE (4. Nesil) from matching iPhone SE 2020 / SE 2 / SE 3
+        // Prevent iPhone SE (4. Nesil) from matching older iPhone SE (2020/2022/64GB)
         if (Regex.IsMatch(q, @"\bse\b") && (c.Contains("2020") || c.Contains("2022") || c.Contains("se 2") || c.Contains("se 3")))
+        {
+            return false;
+        }
+        if (query.Contains("4. nesil", StringComparison.OrdinalIgnoreCase) &&
+            !c.Contains("4. nesil") && !c.Contains("4.nesil") && !c.Contains("2025"))
         {
             return false;
         }
@@ -556,6 +489,7 @@ public static class MarketAggregator
                         if (!decimal.TryParse(mOffer.Groups["price"].Value, NumberStyles.Any, CultureInfo.InvariantCulture, out var price) || price < 3000)
                             continue;
                         if (IsRefurbishedOrUsed(rawTitle)) continue;
+                        if (!IsModelMatch(StripStorageSuffix(query), rawTitle)) continue;
 
                         var mappedSlug = MapStoreSlug(rawStore, "");
                         if (string.IsNullOrWhiteSpace(mappedSlug) || !AllowedStoreSlugs.Contains(mappedSlug)) continue;

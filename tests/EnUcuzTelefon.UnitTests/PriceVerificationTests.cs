@@ -199,4 +199,26 @@ public class PriceVerificationTests
 
         safeUrl.Should().Be("https://www.hepsiburada.com/ara?q=iPhone%2015%20128GB");
     }
+
+    [Theory]
+    [InlineData("https://my-store.vivo.com/tr/iqoo-13-5g", false)]
+    [InlineData("https://tr.infinixmobility.com/smartphones", false)]
+    [InlineData("https://www.honor.com/tr/phones/", false)]
+    [InlineData("https://www.mediamarkt.com.tr/tr/product/_apple-iphone-16-pro-max-256-gb-147054137.html", true)]
+    public void IsDirectProductUrl_ShouldRejectGenericBrandAndDeadTemplateUrls(string url, bool expected)
+    {
+        EnUcuzTelefon.Shared.Utils.StoreUrlHelper.IsDirectProductUrl(url).Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("Nothing Phone (2)", "CMF by Nothing Phone 1 8 GB 256 GB Akıllı Telefon Siyah", false)]
+    [InlineData("Nothing Phone (2)", "Nothing Phone (2) 256 GB Beyaz", true)]
+    [InlineData("iPhone SE (4. Nesil)", "APPLE iPhone SE 3 GB 64 GB Akıllı Telefon Beyaz", false)]
+    [InlineData("Samsung Galaxy S25+", "SAMSUNG Galaxy S25 12 GB 256 GB Akıllı Telefon", false)]
+    [InlineData("OPPO Reno 12 Pro 5G", "OPPO Reno 15 Pro 5G 12/512 GB Akıllı Telefon", false)]
+    [InlineData("iPhone 16 Pro Max", "APPLE iPhone 16 Pro Max 256 GB Akıllı Telefon (yenilegelsin)", false)]
+    public void IsModelMatch_ShouldRejectMismatchedModelsAndTiers(string query, string candidateTitle, bool expected)
+    {
+        EnUcuzTelefon.Infrastructure.Adapters.MarketAggregator.IsModelMatch(query, candidateTitle).Should().Be(expected);
+    }
 }
