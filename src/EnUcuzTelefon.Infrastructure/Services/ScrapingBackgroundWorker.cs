@@ -181,7 +181,8 @@ public static class OfferLiveUpdater
 
             case VerificationOutcome.Dead:
                 offer.ConsecutiveFailures++;
-                if (offer.IsAvailable && offer.ConsecutiveFailures >= opt.DeactivateAfterFailures)
+                var immediateDeactivate = r.DetectionSource is "Dead_RefurbishedOrUsed" or "Dead_ProductMismatch" or "Dead_InvalidOrNonDirectUrl";
+                if (offer.IsAvailable && (immediateDeactivate || offer.ConsecutiveFailures >= opt.DeactivateAfterFailures))
                 {
                     logger.LogWarning("Deactivating offer {OfferId} ({Reason}): {Url}", offer.Id, r.DetectionSource, offer.Url);
                     offer.IsAvailable = false;
@@ -366,30 +367,47 @@ public sealed class OfferHealthSynchronizer
         _logger = logger;
     }
 
-    public async Task RunAsync(CancellationToken ct)
+    public Task RunAsync(CancellationToken ct)
+        => RunAsync(force: false, productSlug: null, batchSize: null, ct).ContinueWith(_ => { }, TaskScheduler.Default);
+
+    public async Task<int> RunAsync(bool force, string? productSlug, int? batchSize, CancellationToken ct)
     {
         var now = _time.GetUtcNow().UtcDateTime;
         var aliveDueBefore = now - _opt.OfferRecheckInterval;
         var deadDueBefore = now - _opt.UnavailableRecheckInterval;
+        var limit = batchSize is > 0 ? Math.Min(batchSize.Value, 200) : _opt.StaleBatchSize;
 
-        // Yalnızca kontrol zamanı gelmiş teklifler (aralık yoksa aynı teklifler sürekli taranır)
-        var staleOffers = await OffersWithGraph()
-            .Where(o => o.Price > 0 && !string.IsNullOrWhiteSpace(o.Url) && o.IsAvailable &&
-                        (o.LastCheckedAt == default || o.LastCheckedAt < aliveDueBefore))
+        var baseAliveQuery = OffersWithGraph()
+            .Where(o => o.Price > 0 && !string.IsNullOrWhiteSpace(o.Url) && o.IsAvailable);
+
+        if (!string.IsNullOrWhiteSpace(productSlug))
+        {
+            baseAliveQuery = baseAliveQuery.Where(o => o.Variant != null && o.Variant.Product != null && o.Variant.Product.Slug == productSlug);
+        }
+
+        if (!force)
+        {
+            baseAliveQuery = baseAliveQuery.Where(o => o.LastCheckedAt == default || o.LastCheckedAt < aliveDueBefore);
+        }
+
+        // Yalnızca kontrol zamanı gelmiş (veya force=true ile istenen) teklifler
+        var staleOffers = await baseAliveQuery
             .OrderBy(o => o.LastCheckedAt)
-            .Take(_opt.StaleBatchSize)
+            .Take(limit)
             .ToListAsync(ct);
 
-        // Stokta olmayanlar çok daha seyrek kontrol edilir
-        var unavailableOffers = await OffersWithGraph()
-            .Where(o => !string.IsNullOrWhiteSpace(o.Url) && !o.IsAvailable &&
-                        (o.LastCheckedAt == default || o.LastCheckedAt < deadDueBefore))
-            .OrderBy(o => o.LastCheckedAt)
-            .Take(_opt.UnavailableBatchSize)
-            .ToListAsync(ct);
+        // Stokta olmayanlar çok daha seyrek kontrol edilir (force + productSlug yoksa)
+        var unavailableOffers = force
+            ? new List<Offer>()
+            : await OffersWithGraph()
+                .Where(o => !string.IsNullOrWhiteSpace(o.Url) && !o.IsAvailable &&
+                            (o.LastCheckedAt == default || o.LastCheckedAt < deadDueBefore))
+                .OrderBy(o => o.LastCheckedAt)
+                .Take(_opt.UnavailableBatchSize)
+                .ToListAsync(ct);
 
         var offers = staleOffers.Concat(unavailableOffers).ToList();
-        if (offers.Count == 0) return;
+        if (offers.Count == 0) return 0;
 
         var results = await Task.WhenAll(offers.Select(o => VerifyOneAsync(o, ct)));
 
@@ -405,7 +423,6 @@ public sealed class OfferHealthSynchronizer
                 continue;
             }
 
-            var slug = offer.Store?.Slug ?? "trendyol";
             if (OfferLiveUpdater.Apply(offer, result, "LiveEngine", _db, _opt, now, _logger) && offer.Variant != null)
                 affectedVariants.Add(offer.Variant);
         }
@@ -423,6 +440,8 @@ public sealed class OfferHealthSynchronizer
             await _cache.RemoveByPrefixAsync("phone:", ct);
             await _cache.RemoveByPrefixAsync("deals:", ct);
         }
+
+        return offers.Count;
     }
 
     private IQueryable<Offer> OffersWithGraph() =>
