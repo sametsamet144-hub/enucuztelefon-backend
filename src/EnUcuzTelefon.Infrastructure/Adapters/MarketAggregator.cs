@@ -220,6 +220,26 @@ public static class MarketAggregator
         return true;
     }
 
+    public static bool HasDescriptiveUrlModelMismatch(string query, string? url)
+    {
+        if (string.IsNullOrWhiteSpace(query) || string.IsNullOrWhiteSpace(url) || !Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            return false;
+
+        var host = uri.Host.ToLowerInvariant();
+        if (!host.Contains("mediamarkt.com.tr") &&
+            !host.Contains("n11.com") &&
+            !host.Contains("trendyol.com") &&
+            !host.Contains("hepsiburada.com") &&
+            !host.Contains("teknosa.com") &&
+            !host.Contains("pttavm.com"))
+        {
+            return false;
+        }
+
+        var slug = uri.AbsolutePath.Replace('/', ' ').Replace('-', ' ').Replace('_', ' ');
+        return !IsModelMatch(query, slug, url);
+    }
+
     public static async Task<IReadOnlyList<StoreRawProduct>> GetOffersForStoreAsync(
         string storeSlug,
         string storeName,
@@ -343,7 +363,11 @@ public static class MarketAggregator
         catch { /* graceful fallback */ }
 
         var results = offersByStore.Values
-            .Where(o => AllowedStoreSlugs.Contains(o.StoreSlug) && o.Price >= 1500 && !string.IsNullOrWhiteSpace(o.Url))
+            .Where(o => AllowedStoreSlugs.Contains(o.StoreSlug) &&
+                        o.Price >= 1500 &&
+                        !string.IsNullOrWhiteSpace(o.Url) &&
+                        !HasDescriptiveUrlModelMismatch(cleanModelQuery, o.Url) &&
+                        (string.IsNullOrWhiteSpace(o.Title) || IsModelMatch(cleanModelQuery, o.Title, o.Url)))
             .OrderByDescending(o => o.IsDirectProductUrl)
             .ThenBy(o => o.Price)
             .ToList();
